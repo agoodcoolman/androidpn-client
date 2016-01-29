@@ -34,6 +34,10 @@ public class StateRecoder {
 		this.isPreSucess = isPreSucess;
 	}
 
+	/**
+	 * 连续心跳中上一次是否失败.
+	 * @return
+	 */
 	public boolean isPreFaild() {
 		return isPreFaild;
 	}

@@ -48,16 +48,13 @@ public class HeartManager implements PingFailedListener, PingSucessListener{
 	private final int NAT_MOIBLE = 5* 60 * 1000; // 移动NAT 老化时间
 	private final int NAT_UNION = 5* 60 * 1000; // 联通NAT 老化时间
 	private final int NAT_TELECOM = 28 * 60 * 1000; // 电信NAT 老化时间
-	private int connType; // 连接类型
-	private int simOperate ;// 手机卡运营商 ,具体类型常亮在 NetUtils中
+	private int currentConnType = -1; // 连接类型
+	private int currentSimOperate = -1;// 手机卡运营商 ,具体类型常亮在 NetUtils中,当前实际的网络类型
 	private XmppManager xmppManager;
 
 	private PingManager pingManager;
 	
 	private static HeartManager heartManger = null;
-
-	
-
 	private Timer calculateTimer; // 测量heart 长度使用的时间器
 	
 	private StateRecoder recoder = new StateRecoder();
@@ -66,12 +63,35 @@ public class HeartManager implements PingFailedListener, PingSucessListener{
 	private HeartManager (XmppManager xmppManager) {
 		this.xmppManager = xmppManager;
 		pingManager = PingManager.getInstanceFor(xmppManager.getConnection());
+		// 当前的网络的实际类型通过方法获取到
+		currentConnType = NetUtils.networkConnectionType(xmppManager.getContext());
+		currentSimOperate = NetUtils.networkOperate(xmppManager.getContext());
+		switch (currentConnType) {
+		// 根据网络类型进行判断,当前在sp中存贮的最大的
+		case NetUtils.TYPE_WIFI: // WIFI 连接下的最大心跳间隔
+			MaxHeart = getSPMaxHeart(currentConnType);
+			break;
+		case NetUtils.TYPE_MOIBLE:// 手机网络
+			
+			if (currentSimOperate == NetUtils.CHINA_MOIBLE) // 移动NAT 最大老化时间
+				MaxHeart = getSPMaxHeart(currentConnType);
+			else if (currentSimOperate == NetUtils.CHINA_TELECOM) // 电信
+				MaxHeart = getSPMaxHeart( currentConnType);
+			else if (currentSimOperate == NetUtils.CHINA_UNICON) // 联通
+				MaxHeart = getSPMaxHeart(currentConnType);
+			
+			break;
+		case NetUtils.TYPE_ERROR:
+			currentHeart = minFixHeart;
+			break;
+		}
+		
+		// 注册接口
 		pingManager.registerPingFailedListener(this);
 		pingManager.registerPingSucessListener(this);
 	}
 
-	
-	public static HeartManager getInstance (XmppManager xmppManager, int connType, int sim_operate) {
+	public static HeartManager getInstance (XmppManager xmppManager) {
 		
 		if (heartManger == null) {
 			synchronized (HeartManager.class) {
@@ -79,44 +99,20 @@ public class HeartManager implements PingFailedListener, PingSucessListener{
 					heartManger = new HeartManager(xmppManager);
 			}
 		}
-		heartManger.setSimOperate(sim_operate);
-		heartManger.setConnType(connType);
 		return heartManger;
 	}
 
 	public int getConnType() {
-		return connType;
+		return currentConnType;
 	}
 
-	public void setConnType(int connType) {
-		// 按照网络类型,已经自动 给定了最大的时间间隔
-		this.connType = connType;
-		switch (connType) {
-		// 根据网络类型进行判断,当前在sp中存贮的最大的
-		case NetUtils.TYPE_WIFI: // WIFI 连接下的最大心跳间隔
-			MaxHeart = getSPMaxHeart(Constants.WIFI, connType);
-			break;
-		case NetUtils.TYPE_MOIBLE:
-			if (simOperate == NetUtils.CHINA_MOIBLE) // 移动NAT 最大老化时间
-				MaxHeart = getSPMaxHeart(Constants.CHINA_MOIBLE, connType);
-			else if (simOperate == NetUtils.CHINA_TELECOM) // 电信
-				MaxHeart = getSPMaxHeart(Constants.CHINA_TELECOM, connType);
-			else if (simOperate == NetUtils.CHINA_UNICON) // 联通
-				MaxHeart = getSPMaxHeart(Constants.CHINA_UNICON, connType);
-			break;
-		case NetUtils.TYPE_ERROR:
-			currentHeart = minFixHeart;
-			break;
-		}
-	}
-	
 	public int getSimOperate() {
-		return simOperate;
+		return currentSimOperate;
 	}
 
 
 	public void setSimOperate(int simOperate) {
-		this.simOperate = simOperate;
+		this.currentSimOperate = simOperate;
 	}
 
 
@@ -139,6 +135,7 @@ public class HeartManager implements PingFailedListener, PingSucessListener{
 						MaxHeart = currentHeart;
 						sucessHeart = currentHeart;
 						 // 保存到sp中吧.
+						
 						// 如果上次失败了.这次成功,代表测算结束,就在当前的时间间隔下进行心跳就好了.
 							// 清空所有的相关的失败数据
 						// 如如果没有失败过,那么就使用延时探测步骤,进行心跳时间的探测
@@ -296,9 +293,10 @@ public class HeartManager implements PingFailedListener, PingSucessListener{
 	 * @param connType
 	 */
 	private void saveSpMaxHeart(String key, int connType) {
+		// 保存之前要查是否有~~
 		SharedPreferences sharedPreferences = xmppManager.getContext().getSharedPreferences(Constants.SHARED_PREFERENCE_NAME, Context.MODE_PRIVATE);
-		int resultInt = sharedPreferences.getInt(key, -1);
-		
+		// 调用成功心跳稍微小一点的心跳值,作为稳定心跳.
+		sharedPreferences.edit().putInt(key, sucessHeart - sucessStep).commit();
 	}
 	
 	/**
@@ -307,13 +305,16 @@ public class HeartManager implements PingFailedListener, PingSucessListener{
 	 * @param connType
 	 * @return
 	 * 
-	 * 
 	 * 如果用户进行换号,换网络了,这个时间好像就不能用了.
 	 */
-	private int getSPMaxHeart (String key, int connType) {
-		SharedPreferences sharedPreferences = xmppManager.getContext().getSharedPreferences(Constants.SHARED_PREFERENCE_NAME, Context.MODE_PRIVATE);
-		int resultInt = sharedPreferences.getInt(key, -1);// 获取当前网络类型下的最大时间.
+	private int getSPMaxHeart (int connType) {
 		
+		SharedPreferences sharedPreferences = xmppManager.getContext().getSharedPreferences(Constants.SHARED_PREFERENCE_NAME, Context.MODE_PRIVATE);
+		int resultInt = sharedPreferences.getInt(Constants.NETWORKTYPE, NetUtils.TYPE_ERROR);// 获取当前网络类型下的最大时间.
+		int operate = sharedPreferences.getInt(Constants.SIM_OPERATE, NetUtils.NO_OPERATE); // 取出上一次的网络类型,运营商
+		// 当前SP中取出网络类型.
+	
+		// 如果sp中未存储相应的值,那么就取默认的值,
 		if (resultInt == -1) {
 			switch (connType) {
 			// 根据网络类型进行判断
@@ -321,12 +322,12 @@ public class HeartManager implements PingFailedListener, PingSucessListener{
 				resultInt = 7 * 60 * 1000;
 				break;
 			case NetUtils.TYPE_MOIBLE:
-				if (simOperate == NetUtils.CHINA_MOIBLE) // 移动NAT 最大老化时间
-					resultInt = (5 * 60)*1000;
-				else if (simOperate == NetUtils.CHINA_TELECOM) // 电信
-					resultInt = (15 * 60) * 1000;
-				else if (simOperate == NetUtils.CHINA_UNICON) // 联通
-					resultInt = (5 * 60)*1000;
+				if (operate == NetUtils.CHINA_MOIBLE) // 移动NAT 最大老化时间  这里取对应的时间,
+					resultInt = sharedPreferences.getInt(Constants.CHINA_MOIBLE, (5 * 60)*1000);
+				else if (operate == NetUtils.CHINA_TELECOM) // 电信
+					resultInt = sharedPreferences.getInt(Constants.CHINA_TELECOM, (15 * 60) * 1000);
+				else if (operate == NetUtils.CHINA_UNICON) // 联通
+					resultInt = sharedPreferences.getInt(Constants.CHINA_TELECOM, (5 * 60)*1000);
 				break;
 			case NetUtils.TYPE_ERROR: // 没有网络连接吧~~
 				// TODO 待处理

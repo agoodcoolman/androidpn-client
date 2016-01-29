@@ -69,23 +69,11 @@ public final class ServiceManager {
 
     public ServiceManager(Context context) {
         this.context = context;
-        int simOperate = -1;
-        int networkType = -1;
         if (context instanceof Activity) {
             Log.i(LOGTAG, "Callback Activity...");
             Activity callbackActivity = (Activity) context;
             callbackActivityPackageName = callbackActivity.getPackageName();
             callbackActivityClassName = callbackActivity.getClass().getName();
-            // 手机网络
-            if (NetUtils.networkConnectionType(context) == ConnectivityManager.TYPE_MOBILE) {
-            	// 如果是手机网络,前面已经做了网络连接判断
-            	simOperate = NetUtils.networkOperate(context);
-            	networkType = NetUtils.TYPE_MOIBLE;
-            } else if (NetUtils.networkConnectionType(context) == ConnectivityManager.TYPE_WIFI) {
-            	networkType = NetUtils.TYPE_WIFI;
-            } else {
-            	networkType = NetUtils.TYPE_ERROR;
-            }
         }
 
         //        apiKey = getMetaDataValue("ANDROIDPN_API_KEY");
@@ -110,8 +98,6 @@ public final class ServiceManager {
                 Constants.SHARED_PREFERENCE_NAME, Context.MODE_PRIVATE);
         Editor editor = sharedPrefs.edit();
         editor.putString(Constants.API_KEY, apiKey);
-        editor.putInt(Constants.SIM_OPERATE, simOperate);
-        editor.putInt(Constants.NETWORKTYPE, networkType);
         editor.putString(Constants.VERSION, version);
         editor.putString(Constants.XMPP_HOST, xmppHost);
         editor.putInt(Constants.XMPP_PORT, Integer.parseInt(xmppPort));

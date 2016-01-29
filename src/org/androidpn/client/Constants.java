@@ -58,8 +58,13 @@ public class Constants {
 
     public static final String SETTINGS_TOAST_ENABLED = "SETTINGS_TOAST_ENABLED";
     
+    /**
+     * 网络运营商
+     */
     public static final String SIM_OPERATE = "sim_operate";
-    
+    /**
+     * 网络类型
+     */
     public static final String NETWORKTYPE = "network_type";
 
     // NOTIFICATION FIELDS
@@ -82,11 +87,22 @@ public class Constants {
 
     public static final String ACTION_NOTIFICATION_CLEARED = "org.androidpn.client.NOTIFICATION_CLEARED";
     
-    
+    /**
+     * WiFi
+     */
     public static final String WIFI = "wifi";
     
+    /**
+     * 移动
+     */
     public static final String CHINA_MOIBLE = "china_moible";
+    /**
+     * 联通
+     */
 	public static final String CHINA_UNICON = "china_unicon";
+	/**
+	 * 电信
+	 */
 	public static final String CHINA_TELECOM = "china_telecom";
 	
 
