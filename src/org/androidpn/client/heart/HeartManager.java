@@ -3,6 +3,7 @@ package org.androidpn.client.heart;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.logging.Logger;
 
 import org.androidpn.client.Constants;
 import org.androidpn.client.XmppManager;
@@ -15,6 +16,7 @@ import org.jivesoftware.smackx.ping.PingSucessListener;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.net.ConnectivityManager;
 import android.util.Log;
 
 /**
@@ -69,17 +71,11 @@ public class HeartManager implements PingFailedListener, PingSucessListener{
 		switch (currentConnType) {
 		// 根据网络类型进行判断,当前在sp中存贮的最大的
 		case NetUtils.TYPE_WIFI: // WIFI 连接下的最大心跳间隔
-			MaxHeart = getSPMaxHeart(currentConnType);
+			MaxHeart = getSPWIFIMaxHeart();
 			break;
 		case NetUtils.TYPE_MOIBLE:// 手机网络
 			
-			if (currentSimOperate == NetUtils.CHINA_MOIBLE) // 移动NAT 最大老化时间
-				MaxHeart = getSPMaxHeart(currentConnType);
-			else if (currentSimOperate == NetUtils.CHINA_TELECOM) // 电信
-				MaxHeart = getSPMaxHeart( currentConnType);
-			else if (currentSimOperate == NetUtils.CHINA_UNICON) // 联通
-				MaxHeart = getSPMaxHeart(currentConnType);
-			
+			MaxHeart = getcurrentNetworkMaxHeart();
 			break;
 		case NetUtils.TYPE_ERROR:
 			currentHeart = minFixHeart;
@@ -117,6 +113,7 @@ public class HeartManager implements PingFailedListener, PingSucessListener{
 
 
 	// 测算最优的后台心跳包,最大步长测算,每个星期就行测算.现在环境已经正常.前面已经测试好才有这步.
+	// 只有一直测试,一直加时间,一直加到失败,然后失败的上一次的成功时间就是当前的最佳的心跳时间.
 	public void calculateBestHeart () {
 		// MaxHeart 已经按照网络类型给定了最大的网络间隔
 		currentHeart = MaxHeart;
@@ -125,53 +122,78 @@ public class HeartManager implements PingFailedListener, PingSucessListener{
 			
 			@Override
 			public void run() {
+				Log.i(LOGTAG, "开启测算线程");
+				recoder.increaseTotal1(); // 心跳包的数量
 				// pingMyServer 里面的时间是表示的服务器的响应时间.
 				boolean pingMyServer = pingManager.pingMyServer();
+				
 				if (pingMyServer) { // 成功
+					// 成功认定,只要成功
 					recoder.setPreSucess(true);// 只要成功了一次就一定有成功心跳,失败后根据判断是否有成功心跳,然后使用成功的心跳进行认定为
-					recoder.sucessincrenment1();
-					if (recoder.isPreFaild()) { //
-						
+					int sucessincrenment1 = recoder.sucessincrenment1();
+					Log.i(LOGTAG, "成功认定的次数" + sucessincrenment1);
+					
+					
+					if (sucessincrenment1 > 5) { // 5次认定法则
+						// 5次延时成功认定
 						MaxHeart = currentHeart;
 						sucessHeart = currentHeart;
 						 // 保存到sp中吧.
-						
-						// 如果上次失败了.这次成功,代表测算结束,就在当前的时间间隔下进行心跳就好了.
-							// 清空所有的相关的失败数据
-						// 如如果没有失败过,那么就使用延时探测步骤,进行心跳时间的探测
+						saveSpMaxHeart();
 						
 						
-					} else { // 
-						calculateTimer.cancel();
-						calculateTimer.purge();
-						sucessHeart = currentHeart;
-						currentHeart -= heartStep;
-						calculateTimer = null;
+						// 如果上一波是失败的,那么下一波就不延时测算了.当前的值就可以做保存了
+						if (recoder.isPreFaild()) {
+							calculateTimer.cancel();
+							calculateTimer.purge();
+							currentHeart += heartStep;
+							calculateTimer = null;
+							
+							// TODO  这里是进行正常的心跳运行
+							
+						} else {
+							// 上一波还没失败,还要继续测算
+							recoder.clear();
+							recoder.setPreSucess(true);
+							calculateBestHeart(); // 按照新的心跳的时间去测算.
+						}
 						
-						calculateBestHeart ();
 					}
+					
 				} else { // 失败ping服务器失败
-					// 这里是将数字加1
+					// 这里是将数字加1,5次失败认定
 					int andIncrement = recoder.faildIncrenment1();
+					Log.i(LOGTAG, "失败认定的次数" + andIncrement);
+					
 					if (andIncrement > 5) {
 						// 这里等于失败,失败之后要断开连接,并且重新连接,然后在进行测算.
 						// 失败认定,那么就是使用上次成功的心跳包进行测试.
 						calculateTimer.cancel();
 						calculateTimer.purge();
 						calculateTimer = null;
-						if (recoder.isPreSucess()) {
-							// 判断是否成功过.
-							  //成功过,这里就直接使用成功的心跳时间间隔进行心跳
+						
+						// 上一波如果是成功的,这一波失败了,那么久按照上一波成功的时间进行心跳.
+						if (recoder.isPreSucess()) { 
+							// TODO 按照上一次sp中的成功的心跳 进行.下面是开启固定心跳.
 							
-							  //没有成功过,那么这里就重
-						} 
-						currentHeart = MaxHeart - heartStep;
-						MaxHeart = MaxHeart - heartStep;
-						calculateTimer = null;
-						recoder.clear();
+						} else {
+							
+							// 减少心跳时间,然后进行心跳测试
+							currentHeart = MaxHeart - heartStep;
+							MaxHeart = MaxHeart - heartStep;
+							calculateTimer = null;
+							recoder.clear();
+							
+							recoder.setPreFaild(true);
+							// 怎么处理重启线程,然后再进来.
+							xmppManager.startReconnectionThread();
+						}
 						
 						
-						calculateBestHeart ();
+						
+						
+						
+						
 					}
 						
 				}
@@ -289,54 +311,85 @@ public class HeartManager implements PingFailedListener, PingSucessListener{
 	
 	/**
 	 * 保存最大的心跳时间到sp中。存到当前的网络类型下.
-	 * @param key
+	 * @param key 当前的网络类型,比如:Constants.CHINA_MOIBLE
 	 * @param connType
 	 */
-	private void saveSpMaxHeart(String key, int connType) {
+	private void saveSpMaxHeart() {
 		// 保存之前要查是否有~~
 		SharedPreferences sharedPreferences = xmppManager.getContext().getSharedPreferences(Constants.SHARED_PREFERENCE_NAME, Context.MODE_PRIVATE);
+		if (currentConnType == ConnectivityManager.TYPE_WIFI) {
+			// wifi
+			sharedPreferences.edit().putInt(Constants.WIFI, sucessHeart).commit();
+		} else {
+			// 手机网络
+			switch (currentSimOperate) {
+			case NetUtils.NO_OPERATE: // 上一次没有存运营商
+				//  保存当前的网络类型
+				// TODO 没有运营商,显然是WIFI.就不在这里处理,下面有处理wifi的
+				break;
+			case NetUtils.CHINA_MOIBLE: // 移动
+				sharedPreferences.edit().putInt(Constants.CHINA_MOIBLE, sucessHeart).commit();
+				
+				break;
+			case NetUtils.CHINA_TELECOM: // 电信
+				sharedPreferences.edit().putInt(Constants.CHINA_TELECOM, sucessHeart).commit();
+				
+				break; 
+			case NetUtils.CHINA_UNICON: // 联通
+				sharedPreferences.edit().putInt(Constants.CHINA_UNICON, sucessHeart).commit();
+				break;
+			}
+		}
+		
+		
 		// 调用成功心跳稍微小一点的心跳值,作为稳定心跳.
-		sharedPreferences.edit().putInt(key, sucessHeart - sucessStep).commit();
+		
 	}
 	
 	/**
-	 * 获取sp中存的时间.获得当前网络类型下的最大的心跳时间间隔
+	 * 在当前使用手机网络的情形下,获取当前网络下的最大的心跳包.
 	 * @param key   eg:Constants.WIFI
 	 * @param connType
 	 * @return
 	 * 
 	 * 如果用户进行换号,换网络了,这个时间好像就不能用了.
 	 */
-	private int getSPMaxHeart (int connType) {
+	private int getcurrentNetworkMaxHeart () {
 		
 		SharedPreferences sharedPreferences = xmppManager.getContext().getSharedPreferences(Constants.SHARED_PREFERENCE_NAME, Context.MODE_PRIVATE);
-		int resultInt = sharedPreferences.getInt(Constants.NETWORKTYPE, NetUtils.TYPE_ERROR);// 获取当前网络类型下的最大时间.
+//		int netTypeMaxTime = sharedPreferences.getInt(Constants.NETWORKTYPE, NetUtils.TYPE_ERROR);// 获取当前网络类型下的最大时间.
 		int operate = sharedPreferences.getInt(Constants.SIM_OPERATE, NetUtils.NO_OPERATE); // 取出上一次的网络类型,运营商
-		// 当前SP中取出网络类型.
-	
-		// 如果sp中未存储相应的值,那么就取默认的值,
-		if (resultInt == -1) {
-			switch (connType) {
-			// 根据网络类型进行判断
-			case NetUtils.TYPE_WIFI: // WIFI 连接下的最大心跳间隔
-				resultInt = 7 * 60 * 1000;
-				break;
-			case NetUtils.TYPE_MOIBLE:
-				if (operate == NetUtils.CHINA_MOIBLE) // 移动NAT 最大老化时间  这里取对应的时间,
-					resultInt = sharedPreferences.getInt(Constants.CHINA_MOIBLE, (5 * 60)*1000);
-				else if (operate == NetUtils.CHINA_TELECOM) // 电信
-					resultInt = sharedPreferences.getInt(Constants.CHINA_TELECOM, (15 * 60) * 1000);
-				else if (operate == NetUtils.CHINA_UNICON) // 联通
-					resultInt = sharedPreferences.getInt(Constants.CHINA_TELECOM, (5 * 60)*1000);
-				break;
-			case NetUtils.TYPE_ERROR: // 没有网络连接吧~~
-				// TODO 待处理
-				currentHeart = minFixHeart;
-				break;
-			}
-		} 
-		return resultInt;
+		// SP中取出(上一次的网络运营商)
+		// 与
+		// 当前的网络运营商
+		// 当前的网络类型
+		int i = -1;
+		switch (currentSimOperate) {
+		case NetUtils.NO_OPERATE: // 上一次没有存运营商
+			//  保存当前的网络类型
+			// TODO 没有运营商,显然是WIFI.就不在这里处理,下面有处理wifi的
+			i = 10;
+			break;
+		case NetUtils.CHINA_MOIBLE: // 移动
+			i = sharedPreferences.getInt(Constants.CHINA_MOIBLE, 5 * 60 * 1000); // NAT 最长的老化时间来算的
+			break;
+		case NetUtils.CHINA_TELECOM: // 电信
+			i = sharedPreferences.getInt(Constants.CHINA_TELECOM, 5 * 60 * 1000);
+			break; 
+		case NetUtils.CHINA_UNICON: // 联通
+			i = sharedPreferences.getInt(Constants.CHINA_UNICON, 5 * 60 * 1000);
+			break;
+		}
+		return i;
 	}
 	
+	/**
+	 * 获取WiFi连接下的最大的心跳包
+	 * @return
+	 */
+	private int getSPWIFIMaxHeart() {
+		SharedPreferences sharedPreferences = xmppManager.getContext().getSharedPreferences(Constants.SHARED_PREFERENCE_NAME, Context.MODE_PRIVATE);
+		return sharedPreferences.getInt(Constants.WIFI, 7 * 60 * 1000); // 后面是最大的时间
+	}
 	
 } 

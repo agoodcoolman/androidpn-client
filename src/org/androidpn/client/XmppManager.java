@@ -597,15 +597,12 @@ public class XmppManager {
      */
     public void startHeartManager() {
         
-        /*registerHeartBeat();
-        startAlram();*/
-    	
     	HeartManager instance = HeartManager.getInstance(XmppManager.this);
     	// 连接成功,三次心跳
     	boolean send3Ping = instance.send3Ping();
-    	// 是否要进行
+    	// 是否要进行测算,这里是即使重新开了线程,这里照样是.
     	if (send3Ping && NetUtils.TYPE_MOIBLE == networkType && DateUtils.getDay_OF_WEEK() == 4) {
-    		// 测算要求是星期三,并且是手机网络.
+    		// 测算要求是星期三,并且是手机网络. 这里是每个星期四进行测算
     		instance.calculateBestHeart();
     	}
     	instance.frontTaskActivity();
@@ -628,6 +625,8 @@ public class XmppManager {
     	}
 	}
    
+	
+	
   /*  *//**
      * 开启闹钟,定时发送
      *//*
