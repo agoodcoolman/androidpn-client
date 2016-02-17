@@ -21,6 +21,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 import org.androidpn.client.uitls.LogUtil;
+import org.jivesoftware.smack.packet.Message;
 import org.jivesoftware.smackx.filetransfer.IBBTransferNegotiator;
 
 import android.app.Service;
@@ -52,10 +53,6 @@ public class NotificationService extends Service {
 
     private TelephonyManager telephonyManager;
 
-    //    private WifiManager wifiManager;
-    //
-    //    private ConnectivityManager connectivityManager;
-
     private BroadcastReceiver notificationReceiver;
 
     private BroadcastReceiver connectivityReceiver;
@@ -73,7 +70,7 @@ public class NotificationService extends Service {
     private SharedPreferences sharedPrefs;
 
     private String deviceId;
-    private MyIBinder myBinder ;
+    private NotificationServiceIBinder myBinder ;
 
     public NotificationService() {
         notificationReceiver = new NotificationReceiver();
@@ -82,7 +79,7 @@ public class NotificationService extends Service {
         executorService = Executors.newSingleThreadExecutor();
         taskSubmitter = new TaskSubmitter(this);
         taskTracker = new TaskTracker(this);
-        myBinder = new MyIBinder();
+        myBinder = new NotificationServiceIBinder();
     }
 
     @Override
@@ -127,6 +124,8 @@ public class NotificationService extends Service {
         });
     }
 
+    
+    
     @Override
     public void onStart(Intent intent, int startId) {
         Log.d(LOGTAG, "onStart()...");
@@ -142,7 +141,7 @@ public class NotificationService extends Service {
     public IBinder onBind(Intent intent) {
         Log.d(LOGTAG, "onBind()...");
         
-        return null;
+        return new NotificationServiceIBinder();
     }
 
     @Override
@@ -242,6 +241,7 @@ public class NotificationService extends Service {
 
     private void start() {
         Log.d(LOGTAG, "start()...");
+        // 开启了接受者,自动就会启动执行connect()方法
         registerNotificationReceiver();
         registerConnectivityReceiver();
         // Intent intent = getIntent();
@@ -318,7 +318,7 @@ public class NotificationService extends Service {
     }
     
     
-    public class MyIBinder extends Binder implements ServiceInterface{
+    public class NotificationServiceIBinder extends Binder implements ServiceInterface, onMessage{
 
 		@Override
 		public void frontTask() {
@@ -333,11 +333,17 @@ public class NotificationService extends Service {
 			xmppManager.backgroundTask();
 		}
 		
-		NotificationService getService () {
+		public NotificationService getService () {
 			Log.d(LOGTAG, "service getService ...");
 			return NotificationService.this;
 		}
-    	
+
+		@Override
+		public boolean sendMessage(Message message) {
+			xmppManager.getConnection().sendPacket(message);
+			return false;
+		}
+		
     }
     
     // 接口前台服务,后台服务
@@ -346,5 +352,9 @@ public class NotificationService extends Service {
     	
     	void backgroundTask();
     }
+    
+   public interface onMessage {
+	   boolean sendMessage(Message message);
+   }
 
 }

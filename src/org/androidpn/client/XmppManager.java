@@ -348,7 +348,7 @@ public class XmppManager {
 
         final XmppManager xmppManager;
 
-        private ConnectTask() {
+        private ConnectTask() {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           
             this.xmppManager = XmppManager.this;
         }
 
@@ -423,8 +423,8 @@ public class XmppManager {
 
 //                final String newUsername = newRandomUUID();
 //                final String newPassword = newRandomUUID();
-                final String newUsername = "minmin";
-                final String newPassword = "000000";
+                final String newUsername = XmppPush.newUsername;
+                final String newPassword = XmppPush.newPassword;
 
                 Registration registration = new Registration();
 

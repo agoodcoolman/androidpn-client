@@ -16,11 +16,14 @@
 package org.androidpn.client;
 
 import java.util.Properties;
+
+import org.androidpn.client.NotificationService.NotificationServiceIBinder;
 import org.androidpn.client.NotificationService.ServiceInterface;
 import org.androidpn.client.heart.HeartManager;
 import org.androidpn.client.uitls.LogUtil;
 import org.androidpn.client.uitls.NetUtils;
 import org.androidpn.client.uitls.TaskUtils;
+
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.Service;
@@ -61,7 +64,7 @@ public final class ServiceManager {
 
     private String xmppPort;
 
-    private ServiceInterface notificationSerivice;
+    private NotificationServiceIBinder notificationSerivice;
     
     private String callbackActivityPackageName;
 
@@ -147,7 +150,6 @@ public final class ServiceManager {
     	if (appForgroud) {
     		if (notificationSerivice != null)
     			notificationSerivice.frontTask();
-    		
     	} 
     }
     // 应用程序在后台时候
@@ -233,6 +235,11 @@ public final class ServiceManager {
         Intent intent = new Intent().setClass(context,NotificationSettingsActivity.class);
         context.startActivity(intent);
     }
+    
+    public NotificationServiceIBinder getNotificationService() {
+    	return notificationSerivice;
+    }
+    
     /* 绑定service监听*/  
     ServiceConnection sconnection = new ServiceConnection() {
 
@@ -240,7 +247,7 @@ public final class ServiceManager {
 		public void onServiceConnected(ComponentName name, IBinder service) {
 			Log.i(LOGTAG, "ServiceConnection onServiceConnected ...");
 			// 连接
-			notificationSerivice = (ServiceInterface)service;
+			notificationSerivice = (NotificationServiceIBinder)service;
 		}
 
 		@Override
