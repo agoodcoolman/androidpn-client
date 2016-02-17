@@ -71,11 +71,10 @@ public class HeartManager implements PingFailedListener, PingSucessListener{
 		switch (currentConnType) {
 		// 根据网络类型进行判断,当前在sp中存贮的最大的
 		case NetUtils.TYPE_WIFI: // WIFI 连接下的最大心跳间隔
-			MaxHeart = getSPWIFIMaxHeart();
+			currentHeart = getSPWIFIMaxHeart();
 			break;
 		case NetUtils.TYPE_MOIBLE:// 手机网络
-			
-			MaxHeart = getcurrentNetworkMaxHeart();
+			currentHeart = getcurrentNetworkMaxHeart();
 			break;
 		case NetUtils.TYPE_ERROR:
 			currentHeart = minFixHeart;
@@ -115,8 +114,12 @@ public class HeartManager implements PingFailedListener, PingSucessListener{
 	// 测算最优的后台心跳包,最大步长测算,每个星期就行测算.现在环境已经正常.前面已经测试好才有这步.
 	// 只有一直测试,一直加时间,一直加到失败,然后失败的上一次的成功时间就是当前的最佳的心跳时间.
 	public void calculateBestHeart () {
-		// MaxHeart 已经按照网络类型给定了最大的网络间隔
-		currentHeart = MaxHeart;
+		// MaxHeart 已经按照网络类型给定了最大的网络间隔 currentHeart 当前心跳已经在sp中取出来了
+		if(recoder.isCalcSucess()) {
+			// 已经测算成功了,不用测算了,直接按照sucessHeart成功心跳进行.
+			fixPing(currentHeart - sucessStep);
+			return;
+		}
 		calculateTimer = new Timer();
 		final TimerTask timerTask = new TimerTask() {
 			
@@ -131,7 +134,7 @@ public class HeartManager implements PingFailedListener, PingSucessListener{
 					// 成功认定,只要成功
 					recoder.setPreSucess(true);// 只要成功了一次就一定有成功心跳,失败后根据判断是否有成功心跳,然后使用成功的心跳进行认定为
 					int sucessincrenment1 = recoder.sucessincrenment1();
-					Log.i(LOGTAG, "成功认定的次数" + sucessincrenment1);
+					Log.i(LOGTAG, "成功认定的次数" + sucessincrenment1 + ", 当前的成功的心跳时间=" + sucessHeart);
 					
 					
 					if (sucessincrenment1 > 5) { // 5次认定法则
@@ -139,23 +142,29 @@ public class HeartManager implements PingFailedListener, PingSucessListener{
 						MaxHeart = currentHeart;
 						sucessHeart = currentHeart;
 						 // 保存到sp中吧.
-						saveSpMaxHeart();
-						
+						saveSpMaxHeart(); // 保存当前的成功心跳时间
+						// 成功次数超过5,说明当前测算的时间已经不合适了,那么一定会重新进行测算task的,当前的计算task已经没用,可以取消
+						calculateTimer.cancel();
+						calculateTimer.purge();
+						calculateTimer = null;
 						
 						// 如果上一波是失败的,那么下一波就不延时测算了.当前的值就可以做保存了
 						if (recoder.isPreFaild()) {
-							calculateTimer.cancel();
-							calculateTimer.purge();
-							currentHeart += heartStep;
-							calculateTimer = null;
+							Log.i(LOGTAG, "成功心跳 , 上次心跳失败,这里成功心跳就是当前的成功的心跳;");
 							
-							// TODO  这里是进行正常的心跳运行
-							
+							// 这里是进行正常的心跳运行
+							// 先保存(sucessHeart)然后使用当前的成功心跳时间进行心跳 ,按照成功心跳开始心跳
+//							fixPing(sucessHeart - sucessStep); // 比当前心跳小一点点的心跳作为当前的稳定心跳时间
+							currentHeart = sucessHeart;
+							recoder.setCalcSucess(true);
 						} else {
+							
+							currentHeart += heartStep;
 							// 上一波还没失败,还要继续测算
 							recoder.clear();
 							recoder.setPreSucess(true);
-							calculateBestHeart(); // 按照新的心跳的时间去测算.
+						    // 按照新的心跳的时间去测算.就是当前的连接还未断开,那么按照加步长的方法进行
+							calculateBestHeart();
 						}
 						
 					}
@@ -163,7 +172,7 @@ public class HeartManager implements PingFailedListener, PingSucessListener{
 				} else { // 失败ping服务器失败
 					// 这里是将数字加1,5次失败认定
 					int andIncrement = recoder.faildIncrenment1();
-					Log.i(LOGTAG, "失败认定的次数" + andIncrement);
+					Log.i(LOGTAG, "失败认定的次数" + andIncrement + ", 当前的成功的心跳时间=" + sucessHeart);
 					
 					if (andIncrement > 5) {
 						// 这里等于失败,失败之后要断开连接,并且重新连接,然后在进行测算.
@@ -174,26 +183,22 @@ public class HeartManager implements PingFailedListener, PingSucessListener{
 						
 						// 上一波如果是成功的,这一波失败了,那么久按照上一波成功的时间进行心跳.
 						if (recoder.isPreSucess()) { 
-							// TODO 按照上一次sp中的成功的心跳 进行.下面是开启固定心跳.
-							
+							// 按照上一次sp中的成功的心跳 进行(sucessHeart上一次成功心跳).下面是开启固定心跳.
+							// 上次失败,这里成功,那么就是你了.
+							recoder.setCalcSucess(true);// 测算成功了
+//							fixPing(sucessHeart - sucessStep);
+							currentHeart = sucessHeart;
 						} else {
 							
 							// 减少心跳时间,然后进行心跳测试
 							currentHeart = MaxHeart - heartStep;
 							MaxHeart = MaxHeart - heartStep;
-							calculateTimer = null;
-							recoder.clear();
 							
+							recoder.clear();
 							recoder.setPreFaild(true);
 							// 怎么处理重启线程,然后再进来.
 							xmppManager.startReconnectionThread();
 						}
-						
-						
-						
-						
-						
-						
 					}
 						
 				}
@@ -201,13 +206,7 @@ public class HeartManager implements PingFailedListener, PingSucessListener{
 			}
 		};
 		calculateTimer.schedule(timerTask, currentHeart, currentHeart);
-		//     成功: sucessHeart = currentHeat; currentHeart += heartStep;
 		
-		
-					
-		//     失败: 失败次数如果大于5,那么就结束
-		
-		// 测算出来的稳定值稍小一点的值,作为后台的稳定心跳值.
 	}
 	
 	// 后台稳定心跳,动态调整测略
@@ -227,16 +226,17 @@ public class HeartManager implements PingFailedListener, PingSucessListener{
 	
 	
 	// 前台活跃的固定的心跳包
-	public void fixPing(int longTime) {
+	public void fixPing(int longTimems) {
+		Log.i(LOGTAG, "fixPing.... 当前固定心跳时间" + longTimems);
 		// 取范围中间的,如果超过就取边界值
-		longTime = Math.min(Math.max(longTime, MinHeart), MaxHeart);
-		currentHeart = longTime;
-		pingManager.maybeScedulePingServerTask(longTime/1000);
+//		longTimems = Math.min(Math.max(longTime, MinHeart), MaxHeart);
+//		currentHeart = longTimems;
+		pingManager.maybeScedulePingServerTask(longTimems/1000);
 	}
 	
 	// 发送三次短心跳包,保证下次测试环境的正常.三次连续返回true表示三次短心跳成功, 环境稳定
 	public boolean send3Ping() { // default 5s
-		
+		Log.i(LOGTAG, "开始三次短心跳包....");
 		boolean pingMyServer = pingManager.pingMyServer();
 			
 		if (pingMyServer) {
@@ -268,13 +268,20 @@ public class HeartManager implements PingFailedListener, PingSucessListener{
     public void frontTaskActivity() {
     	Log.i(LOGTAG, "HeartManager frontTaskActivity...");
     	// 进行3次短心跳前isPing3Count = true; 设置为true了.
+    	boolean send3Ping = send3Ping();
+    	if (send3Ping) {
+    		fixPing(20000);
+    	}
     	
     	
     }
     // 应用程序在后台时候
     public void backgroundTaskActivity() {
     	Log.i(LOGTAG, "HeartManager backgroundTaskActivity...");
-    	
+    	boolean send3Ping = send3Ping();
+    	if (send3Ping) {
+    		fixPing(250000);
+    	}
     }
 	
     public void stopHeart() {
@@ -296,8 +303,13 @@ public class HeartManager implements PingFailedListener, PingSucessListener{
 	public void pingFailed() {
 		Log.i(LOGTAG, "HeartManager pingFailed...");
 		
-			// 尝试5次,未到5次,使用上一次的当前心跳进行
+		// 尝试5次,未到5次,使用上一次的当前心跳进行
+		// 这里是进行的心跳的正常的工作,如果这里在正在工作的 时候出现了.失败的情况,重新动态的进行计算.
+		int faildIncrenment1 = recoder.faildIncrenment1();
 		
+		if (faildIncrenment1 > 5) {
+			xmppManager.startReconnectionThread();
+		}
 	}
 
 
@@ -305,7 +317,7 @@ public class HeartManager implements PingFailedListener, PingSucessListener{
 	public void pingSucess() {
 		Log.i(LOGTAG, "HeartManager pingSucess...");
 		// 成功了.
-		 // 成功了,将当前心跳给成功心跳
+		// 成功了,将当前心跳给成功心跳
 		
 	}
 	

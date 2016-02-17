@@ -55,7 +55,7 @@ public class ConnectivityReceiver extends BroadcastReceiver {
             Log.d(LOGTAG, "Network Type  = " + networkInfo.getTypeName());
             Log.d(LOGTAG, "Network State = " + networkInfo.getState());
             if (networkInfo.isConnected()) {
-                Log.i(LOGTAG, "Network connected");
+                Log.i(LOGTAG, "Network connected...");
                 notificationService.connect();
             }
         } else {

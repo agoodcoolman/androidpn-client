@@ -196,7 +196,7 @@ public class NotificationService extends Service {
         Log.d(LOGTAG, "connect()...");
         taskSubmitter.submit(new Runnable() {
             public void run() {
-                Log.i(LOGTAG, "connect()...");
+                Log.i(LOGTAG, "connect()..." + "taskSubmitter");
                 NotificationService.this.getXmppManager().connect();
             }
         });
@@ -246,7 +246,7 @@ public class NotificationService extends Service {
         registerConnectivityReceiver();
         // Intent intent = getIntent();
         // startService(intent);
-        xmppManager.connect();
+//        xmppManager.connect();
     }
 
     private void stop() {

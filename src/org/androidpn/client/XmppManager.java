@@ -524,7 +524,7 @@ public class XmppManager {
         }
 
         public void run() {
-            Log.i(LOGTAG, "LoginTask.run()..."+"taskList"+taskList.size());
+            Log.i(LOGTAG, "LoginTask.run()..."+",taskList"+taskList.size());
 
             if (!xmppManager.isAuthenticated()) {
                 Log.i(LOGTAG, "username=" + username);

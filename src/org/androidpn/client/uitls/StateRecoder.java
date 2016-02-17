@@ -21,6 +21,9 @@ public class StateRecoder {
 	// 进来第一次肯定是没有失败的.上一次心跳包是否失败
 	private boolean isPreFaild = false;
 
+	// 是否计算成功了.
+	private boolean isCalcSucess = false;
+	
 	// 初始化
 	public StateRecoder() {
 		this.failedInteger = new AtomicInteger();
@@ -34,6 +37,16 @@ public class StateRecoder {
 
 	public void setPreSucess(boolean isPreSucess) {
 		this.isPreSucess = isPreSucess;
+	}
+
+	
+	
+	public boolean isCalcSucess() {
+		return isCalcSucess;
+	}
+
+	public void setCalcSucess(boolean isCalcSucess) {
+		this.isCalcSucess = isCalcSucess;
 	}
 
 	/**
