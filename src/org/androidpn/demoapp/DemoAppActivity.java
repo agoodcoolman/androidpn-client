@@ -16,8 +16,11 @@
 package org.androidpn.demoapp;
 
 import org.androidpn.client.ServiceManager;
+import org.androidpn.client.XmppManager;
+import org.androidpn.client.XmppPush;
+import org.androidpn.client.message.MessageManager;
+import org.androidpn.client.message.XmppChatMessage;
 import org.androidpn.client.uitls.NetUtils;
-import org.jivesoftware.smack.packet.Message;
 
 import android.app.Activity;
 import android.os.Bundle;
@@ -33,49 +36,49 @@ import android.widget.Toast;
  */
 public class DemoAppActivity extends Activity {
 
-    private ServiceManager serviceManager;
-
-
 	@Override
     public void onCreate(Bundle savedInstanceState) {
         Log.d("DemoAppActivity", "onCreate()...");
 
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main);   
-       
+        final ServiceManager initialize = XmppPush.initialize(this);
         // Settings
         Button okButton = (Button) findViewById(R.id.btn_settings);
         okButton.setOnClickListener(new View.OnClickListener() {
             public void onClick(View view) {
-                ServiceManager.viewNotificationSettings(DemoAppActivity.this);
+//                ServiceManager.viewNotificationSettings(DemoAppActivity.this);
+            	XmppChatMessage chatMessage = MessageManager.getInstance().getChatMessage(XmppChatMessage.Android_client_01_jid,
+            			XmppChatMessage.Android_client_02_jid, "");
+            	if (initialize.getNotificationService() != null ) {
+            		initialize.getNotificationService().sendMessage(chatMessage);
+            	}
+            	
             }
         });    
-        if (NetUtils.isNetWorkConnection(this)) {
-        	serviceManager = new ServiceManager(this);
-        	serviceManager.setNotificationIcon(R.drawable.notification);
-        	serviceManager.startService();
+        /*if (NetUtils.isNetWorkConnection(this)) {
         	
         } else {
         	Toast.makeText(this, "ÍøÂçÁ¬½ÓÎ´¿ªÆô", Toast.LENGTH_SHORT).show();
-        }
+        }*/
     }
     
     @Override
     protected void onStart() {
     	super.onStart();
     	
-    	serviceManager.onStart();
+    	XmppPush.onStart();
     }
     
     @Override
     protected void onPause() {
     	super.onPause();
-    	serviceManager.onPause();
+    	XmppPush.onPause();
     }
     @Override
     protected void onDestroy() {
     	super.onDestroy();
-    	serviceManager.stopService();
+    	XmppPush.onDestroy();
     }
 
 }

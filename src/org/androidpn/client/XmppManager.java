@@ -86,7 +86,7 @@ public class XmppManager {
 
     private int networkType ;// 网络类型(WIFI/手机网络)
     
-    private int simOperate ;// 手机卡运营商 ,具体类型常亮在 NetUtils中
+//    private int simOperate ;// 手机卡运营商 ,具体类型常亮在 NetUtils中
     
     private ConnectionListener connectionListener;
 
@@ -118,8 +118,8 @@ public class XmppManager {
         xmppPort = sharedPrefs.getInt(Constants.XMPP_PORT, 5222);
         username = sharedPrefs.getString(Constants.XMPP_USERNAME, "");
         password = sharedPrefs.getString(Constants.XMPP_PASSWORD, "");
-        networkType = sharedPrefs.getInt(Constants.NETWORKTYPE, NetUtils.TYPE_ERROR);
-        simOperate = sharedPrefs.getInt(Constants.SIM_OPERATE, NetUtils.NO_OPERATE);
+        
+        
         connectionListener = new PersistentConnectionListener(this);
         notificationPacketListener = new NotificationPacketListener(this);
 //        messagePacketListener = new MessagePacketListener(this);
@@ -212,6 +212,7 @@ public class XmppManager {
         synchronized (taskList) {
             // FIXME 这里需要修复,如果连接时成功的,但是register环节,或者是登录环节出现问题
             // 那么是成功连接的, 这是进入重连线程,无法启动重新连接
+        	terminatePersistentConnection(); // 先关闭其他的连接
             if ((reconnection == null || !reconnection.isAlive()) || 
             		( (getConnection() == null) 
             				|| !getConnection().isAuthenticated())) {
@@ -347,7 +348,7 @@ public class XmppManager {
 
         final XmppManager xmppManager;
 
-        private ConnectTask() {
+        private ConnectTask() {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           
             this.xmppManager = XmppManager.this;
         }
 
@@ -422,8 +423,8 @@ public class XmppManager {
 
 //                final String newUsername = newRandomUUID();
 //                final String newPassword = newRandomUUID();
-                final String newUsername = "minmin";
-                final String newPassword = "000000";
+                final String newUsername = XmppPush.newUsername;
+                final String newPassword = XmppPush.newPassword;
 
                 Registration registration = new Registration();
 
@@ -523,7 +524,7 @@ public class XmppManager {
         }
 
         public void run() {
-            Log.i(LOGTAG, "LoginTask.run()..."+"taskList"+taskList.size());
+            Log.i(LOGTAG, "LoginTask.run()..."+",taskList"+taskList.size());
 
             if (!xmppManager.isAuthenticated()) {
                 Log.i(LOGTAG, "username=" + username);
@@ -596,15 +597,12 @@ public class XmppManager {
      */
     public void startHeartManager() {
         
-        /*registerHeartBeat();
-        startAlram();*/
-    	
-    	HeartManager instance = HeartManager.getInstance(XmppManager.this, networkType, simOperate);
+    	HeartManager instance = HeartManager.getInstance(XmppManager.this);
     	// 连接成功,三次心跳
     	boolean send3Ping = instance.send3Ping();
-    	// 是否要进行
+    	// 是否要进行测算,这里是即使重新开了线程,这里照样是.
     	if (send3Ping && NetUtils.TYPE_MOIBLE == networkType && DateUtils.getDay_OF_WEEK() == 4) {
-    		// 测算要求是星期三,并且是手机网络.
+    		// 测算要求是星期三,并且是手机网络. 这里是每个星期四进行测算
     		instance.calculateBestHeart();
     	}
     	instance.frontTaskActivity();
@@ -613,7 +611,7 @@ public class XmppManager {
     public void frontTask() {
     	Log.i(LOGTAG, "xmppManager frontTask ...");
     	if (getConnection() != null && getConnection().isAuthenticated()) {
-    		HeartManager instance = HeartManager.getInstance(XmppManager.this, networkType, simOperate);
+    		HeartManager instance = HeartManager.getInstance(XmppManager.this);
     		instance.frontTaskActivity();
     	}
 	}
@@ -622,11 +620,13 @@ public class XmppManager {
 	public void backgroundTask() {
 		Log.i(LOGTAG, "xmppManager backgroundTask ...");
 		if (getConnection() != null && getConnection().isAuthenticated()) {
-			HeartManager instance = HeartManager.getInstance(XmppManager.this, networkType, simOperate);
+			HeartManager instance = HeartManager.getInstance(XmppManager.this);
 			instance.backgroundTaskActivity();
     	}
 	}
    
+	
+	
   /*  *//**
      * 开启闹钟,定时发送
      *//*

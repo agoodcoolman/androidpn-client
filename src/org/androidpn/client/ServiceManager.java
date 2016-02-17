@@ -16,11 +16,14 @@
 package org.androidpn.client;
 
 import java.util.Properties;
+
+import org.androidpn.client.NotificationService.NotificationServiceIBinder;
 import org.androidpn.client.NotificationService.ServiceInterface;
 import org.androidpn.client.heart.HeartManager;
 import org.androidpn.client.uitls.LogUtil;
 import org.androidpn.client.uitls.NetUtils;
 import org.androidpn.client.uitls.TaskUtils;
+
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.Service;
@@ -61,7 +64,7 @@ public final class ServiceManager {
 
     private String xmppPort;
 
-    private ServiceInterface notificationSerivice;
+    private NotificationServiceIBinder notificationSerivice;
     
     private String callbackActivityPackageName;
 
@@ -69,23 +72,11 @@ public final class ServiceManager {
 
     public ServiceManager(Context context) {
         this.context = context;
-        int simOperate = -1;
-        int networkType = -1;
         if (context instanceof Activity) {
             Log.i(LOGTAG, "Callback Activity...");
             Activity callbackActivity = (Activity) context;
             callbackActivityPackageName = callbackActivity.getPackageName();
             callbackActivityClassName = callbackActivity.getClass().getName();
-            // 手机网络
-            if (NetUtils.networkConnectionType(context) == ConnectivityManager.TYPE_MOBILE) {
-            	// 如果是手机网络,前面已经做了网络连接判断
-            	simOperate = NetUtils.networkOperate(context);
-            	networkType = NetUtils.TYPE_MOIBLE;
-            } else if (NetUtils.networkConnectionType(context) == ConnectivityManager.TYPE_WIFI) {
-            	networkType = NetUtils.TYPE_WIFI;
-            } else {
-            	networkType = NetUtils.TYPE_ERROR;
-            }
         }
 
         //        apiKey = getMetaDataValue("ANDROIDPN_API_KEY");
@@ -110,8 +101,6 @@ public final class ServiceManager {
                 Constants.SHARED_PREFERENCE_NAME, Context.MODE_PRIVATE);
         Editor editor = sharedPrefs.edit();
         editor.putString(Constants.API_KEY, apiKey);
-        editor.putInt(Constants.SIM_OPERATE, simOperate);
-        editor.putInt(Constants.NETWORKTYPE, networkType);
         editor.putString(Constants.VERSION, version);
         editor.putString(Constants.XMPP_HOST, xmppHost);
         editor.putInt(Constants.XMPP_PORT, Integer.parseInt(xmppPort));
@@ -161,7 +150,6 @@ public final class ServiceManager {
     	if (appForgroud) {
     		if (notificationSerivice != null)
     			notificationSerivice.frontTask();
-    		
     	} 
     }
     // 应用程序在后台时候
@@ -247,6 +235,11 @@ public final class ServiceManager {
         Intent intent = new Intent().setClass(context,NotificationSettingsActivity.class);
         context.startActivity(intent);
     }
+    
+    public NotificationServiceIBinder getNotificationService() {
+    	return notificationSerivice;
+    }
+    
     /* 绑定service监听*/  
     ServiceConnection sconnection = new ServiceConnection() {
 
@@ -254,7 +247,7 @@ public final class ServiceManager {
 		public void onServiceConnected(ComponentName name, IBinder service) {
 			Log.i(LOGTAG, "ServiceConnection onServiceConnected ...");
 			// 连接
-			notificationSerivice = (ServiceInterface)service;
+			notificationSerivice = (NotificationServiceIBinder)service;
 		}
 
 		@Override
