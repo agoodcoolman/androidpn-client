@@ -10,6 +10,7 @@ import org.androidpn.client.XmppManager;
 import org.androidpn.client.uitls.LogUtil;
 import org.androidpn.client.uitls.NetUtils;
 import org.androidpn.client.uitls.StateRecoder;
+import org.jivesoftware.smack.SmackConfiguration;
 import org.jivesoftware.smackx.ping.PingFailedListener;
 import org.jivesoftware.smackx.ping.PingManager;
 import org.jivesoftware.smackx.ping.PingSucessListener;
@@ -197,7 +198,7 @@ public class HeartManager implements PingFailedListener, PingSucessListener{
 							recoder.clear();
 							recoder.setPreFaild(true);
 							// 怎么处理重启线程,然后再进来.
-							xmppManager.startReconnectionThread();
+							startReconnectionThread();
 						}
 					}
 						
@@ -227,7 +228,7 @@ public class HeartManager implements PingFailedListener, PingSucessListener{
 	
 	// 前台活跃的固定的心跳包
 	public void fixPing(int longTimems) {
-		Log.i(LOGTAG, "fixPing.... 当前固定心跳时间" + longTimems);
+		Log.i(LOGTAG, "fixPing.... 当前固定心跳时间" + longTimems +"ms");
 		// 取范围中间的,如果超过就取边界值
 //		longTimems = Math.min(Math.max(longTime, MinHeart), MaxHeart);
 //		currentHeart = longTimems;
@@ -236,13 +237,14 @@ public class HeartManager implements PingFailedListener, PingSucessListener{
 	
 	// 发送三次短心跳包,保证下次测试环境的正常.三次连续返回true表示三次短心跳成功, 环境稳定
 	public boolean send3Ping() { // default 5s
-		Log.i(LOGTAG, "开始三次短心跳包....");
+		Log.i(LOGTAG, "开始三次短心跳包....  xmpp aution" );
+		SmackConfiguration.setPacketReplyTimeout(10000);
 		boolean pingMyServer = pingManager.pingMyServer();
 			
 		if (pingMyServer) {
 			pingFaildCount = 0;
 			pingSucessCount ++;
-			
+			Log.i(LOGTAG, "开始三次短心跳包....成功次数" + pingSucessCount);
 			if (pingSucessCount > 2) // 三次成功
 				pingManager.maybeScedulePingServerTask(sucessHeart - sucessStep); 
 			else 
@@ -268,10 +270,11 @@ public class HeartManager implements PingFailedListener, PingSucessListener{
     public void frontTaskActivity() {
     	Log.i(LOGTAG, "HeartManager frontTaskActivity...");
     	// 进行3次短心跳前isPing3Count = true; 设置为true了.
-    	boolean send3Ping = send3Ping();
-    	if (send3Ping) {
-    		fixPing(20000);
-    	}
+//    	boolean send3Ping = send3Ping();
+//    	if (send3Ping) {
+    		currentHeart = 20000;
+    		fixPing(currentHeart);
+//    	}
     	
     	
     }
@@ -307,8 +310,13 @@ public class HeartManager implements PingFailedListener, PingSucessListener{
 		// 这里是进行的心跳的正常的工作,如果这里在正在工作的 时候出现了.失败的情况,重新动态的进行计算.
 		int faildIncrenment1 = recoder.faildIncrenment1();
 		
-		if (faildIncrenment1 > 5) {
+		if (faildIncrenment1 > 4) {
+			Log.i(LOGTAG, "HeartManager pingFailed,失败次数超过5...");
+			recoder.clear();
+			
 			xmppManager.startReconnectionThread();
+		} else {
+			pingManager.maybeScedulePingServerTask(currentHeart/1000);
 		}
 	}
 

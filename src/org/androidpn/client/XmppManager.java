@@ -150,7 +150,7 @@ public class XmppManager {
     }
 
     // 终止持久链接
-    public void terminatePersistentConnection() {
+    private void terminatePersistentConnection() {
         Log.i(LOGTAG, "terminatePersistentConnection()...");
         Runnable runnable = new Runnable() {
 
@@ -209,15 +209,20 @@ public class XmppManager {
 //	}
     
 	public void startReconnectionThread() {
+		
         synchronized (taskList) {
             // FIXME 这里需要修复,如果连接时成功的,但是register环节,或者是登录环节出现问题
             // 那么是成功连接的, 这是进入重连线程,无法启动重新连接
-        	terminatePersistentConnection(); // 先关闭其他的连接
+        	// 这里是如果当前的连接是存活的,是不需要重新连接的
+//        	terminatePersistentConnection(); // 先关闭其他的连接
+        	Log.i(LOGTAG, "startReconnectionThread()... 重连线程前,connect的状态");
             if ((reconnection == null || !reconnection.isAlive()) || 
             		( (getConnection() == null) 
-            				|| !getConnection().isAuthenticated())) {
+            				|| !getConnection().isConnected()
+            				|| !getConnection().isAuthenticated() ) ) {
+            	Log.i(LOGTAG, "startReconnectionThread()... ");
                 reconnection  = new ReconnectionThread(this);
-                reconnection.setName("Xmpp Reconnection Thread");
+                reconnection.setName("Xmpp Reconnection Thread...");
                 reconnection.start();
             }
         }
@@ -248,7 +253,7 @@ public class XmppManager {
             futureTask = null;
             if (!taskList.isEmpty()) {
                 Runnable runnable = (Runnable) taskList.get(0);
-                Log.i(LOGTAG, "runTask()..."+runnable.getClass().getSimpleName()+taskList.size());
+                Log.i(LOGTAG, "runTask()..."+ runnable.getClass().getSimpleName() + taskList.size());
                 taskList.remove(0);
                 running = true;
                 futureTask = taskSubmitter.submit(runnable);
@@ -556,7 +561,7 @@ public class XmppManager {
 
                     // 开启心跳包
                     startHeartManager();
-                    Log.i(LOGTAG, "start heart beat in successfully");
+                    Log.i(LOGTAG, "start heart beat in successfully...");
                     if (!xmppManager.isConnected()) {
                         dropTask(taskList.size());
                     }
@@ -586,8 +591,10 @@ public class XmppManager {
                     xmppManager.runTask();
                 }
             } else {
-                Log.i(LOGTAG, "Logged in already");
                 xmppManager.runTask();
+                Log.i(LOGTAG, "Logged in already... 已经登录了, 就开启心跳包....");
+                // 开启心跳包
+//                startHeartManager();
             }
 
         }
@@ -596,7 +603,7 @@ public class XmppManager {
      * 这里代表连接成功,开始定时闹钟.注册广播接收.发送定时的心跳
      */
     public void startHeartManager() {
-        
+    	Log.i(LOGTAG, "xmppManager startHeartManager() ...");
     	HeartManager instance = HeartManager.getInstance(XmppManager.this);
     	// 连接成功,三次心跳
     	boolean send3Ping = instance.send3Ping();
@@ -609,7 +616,7 @@ public class XmppManager {
     }
     // 切换到前台
     public void frontTask() {
-    	Log.i(LOGTAG, "xmppManager frontTask ...");
+    	Log.i(LOGTAG, "xmppManager frontTask() ...");
     	if (getConnection() != null && getConnection().isAuthenticated()) {
     		HeartManager instance = HeartManager.getInstance(XmppManager.this);
     		instance.frontTaskActivity();
