@@ -27,7 +27,9 @@ import org.androidpn.client.threadpool.ExecutorThreadPool;
 import org.androidpn.client.uitls.DateUtils;
 import org.androidpn.client.uitls.LogUtil;
 import org.androidpn.client.uitls.NetUtils;
+import org.jivesoftware.smack.Connection;
 import org.jivesoftware.smack.ConnectionConfiguration;
+import org.jivesoftware.smack.ConnectionCreationListener;
 import org.jivesoftware.smack.ConnectionListener;
 import org.jivesoftware.smack.PacketListener;
 import org.jivesoftware.smack.XMPPConnection;
@@ -61,7 +63,7 @@ import android.util.Log;
  * @author Sehwan Noh (devnoh@gmail.com)
  */
 public class XmppManager {
-
+	
     private static final String LOGTAG = LogUtil.makeLogTag(XmppManager.class);
 
     private static final String XMPP_RESOURCE_NAME = "AndroidpnClient";
@@ -109,6 +111,7 @@ public class XmppManager {
     private AlarmManager alarmManager;
 
     public XmppManager(NotificationService notificationService) {
+    	PingManager.getInstanceFor(getConnection());
         context = notificationService;
         taskSubmitter = notificationService.getTaskSubmitter();
         taskTracker = notificationService.getTaskTracker();
@@ -136,8 +139,11 @@ public class XmppManager {
     // 这个方法在NotificationService的onCreate调用一次
     // 然后在广播中也调用了一次,网络连接畅通也要接收一个广播,启动一个Connect连接
     public void connect() {
-        Log.i(LOGTAG, "connect() 当前线程名字  ...."+Thread.currentThread().getName());
-        submitLoginTask();
+    	synchronized (taskList) {
+    		Log.i(LOGTAG, "connect() 当前线程名字  ...."+Thread.currentThread().getName());
+            submitLoginTask();
+		}
+        
     }
 
     public void disconnect() {
@@ -214,7 +220,7 @@ public class XmppManager {
             // 那么是成功连接的, 这是进入重连线程,无法启动重新连接
         	// 这里是如果当前的连接是存活的,是不需要重新连接的
 //        	terminatePersistentConnection(); // 先关闭其他的连接
-        	Log.i(LOGTAG, "startReconnectionThread()... 重连线程前,connect的状态");
+        	Log.i(LOGTAG, "startReconnectionThread()... 启动xmppManager中的重连线程方法,这个方法只要启动一次就好了.");
             if ((reconnection == null || !reconnection.isAlive()) || 
             		( (getConnection() == null) 
             				|| !getConnection().isConnected()
@@ -306,8 +312,8 @@ public class XmppManager {
 
     private void addTask(Runnable runnable) {
         Log.i(LOGTAG, "addTask(runnable)..."+ runnable.getClass().getSimpleName());
-        taskTracker.increase();
         synchronized (taskList) {
+        	taskTracker.increase();
             if (taskList.isEmpty() && !running) {
                 //空或者是 非执行状态
                 running = true;
@@ -327,18 +333,31 @@ public class XmppManager {
      */
     private void dropTask(int dropNum) {
         synchronized (taskList) {
+        	Log.i(LOGTAG, "dropTask(runnable)... 移除前task中的总数=" + taskList.size() );
             if (taskList.size() >= dropNum) {
                 for (int i = 0; i < dropNum; i++) {
                     Log.i(LOGTAG, "dropTask(runnable)... done");
                     taskList.remove(0);
                     taskTracker.decrease();
                 }
+                
             }
         }
     }
 
     public void cleanTask() {
     	dropTask(taskList.size());
+    	/*synchronized (taskList) {
+    		if (taskTracker.count > 0) {
+            	Log.i(LOGTAG, "dropTask(runnable)... taskTracker.count=" + taskTracker.count);
+            	// 在执行的过程中,如果出现了问题,重连了,其实taskTracker还没有来得及-1,然后直接在dropTask中执行的时候,就会出现task只有2,但是tracker还是3的情况
+            	for (int i = 0; i < taskTracker.count; i++) {
+            		Log.i(LOGTAG, "dropTask(runnable)... taskTracker.decrease()执行一次");
+    				taskTracker.decrease();
+    			}
+            }
+		}*/
+    	
     }
     
     private void removeAccount() {
@@ -360,7 +379,7 @@ public class XmppManager {
         }
 
         public void run() {
-            Log.i(LOGTAG, "ConnectTask.run()..."+"taskList's number"+taskList.size());
+            Log.i(LOGTAG, "ConnectTask.run()..."+"taskList's number	的当前数量"+taskList.size());
 
             if (!xmppManager.isConnected()) {
                 // Create the configuration for this new connection
@@ -377,7 +396,7 @@ public class XmppManager {
                 try {
                     // Connect to the server
                     connection.connect();
-                    Log.i(LOGTAG, "XMPP connected successfully"+"taskList"+taskList.size());
+                    Log.i(LOGTAG, "XMPP connected successfully"+"taskList ="+ taskList.size());
 
                     // packet provider
                     ProviderManager.getInstance().addIQProvider("notification",
@@ -620,6 +639,7 @@ public class XmppManager {
     public void frontTask() {
     	Log.i(LOGTAG, "xmppManager frontTask() ...");
     	if (getConnection() != null && getConnection().isAuthenticated()) {
+    		// TODO 这里要进行心跳
     		HeartManager instance = HeartManager.getInstance(XmppManager.this);
     		instance.frontTaskActivity();
     	}
@@ -628,6 +648,7 @@ public class XmppManager {
 	// 切换到后台
 	public void backgroundTask() {
 		Log.i(LOGTAG, "xmppManager backgroundTask ...");
+		// TODO 进行心跳
 		if (getConnection() != null && getConnection().isAuthenticated()) {
 			HeartManager instance = HeartManager.getInstance(XmppManager.this);
 			instance.backgroundTaskActivity();

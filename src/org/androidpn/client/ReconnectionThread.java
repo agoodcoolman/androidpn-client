@@ -39,19 +39,31 @@ public class ReconnectionThread extends Thread {
     }
 
     public void run() {
+    	
         try {
-            while (!isInterrupted() && 
-            		( xmppManager.getConnection() == null || !xmppManager.getConnection().isAuthenticated())) {
-                Log.i(LOGTAG, "Trying to reconnect in " + waiting()
-                        + " seconds");
-                // 取消闹钟广播什么的,重新提交连接申请的时候,把
-//                xmppManager.unregisterHeartBeatReceiver();
-                Thread.sleep((long) waiting() * 1000L);
-                xmppManager.cleanTask();
-                xmppManager.connect();
-                Log.i(LOGTAG, "reconnectThread start...");
-                waiting++;
-            }
+        	synchronized (ReconnectionThread.class) {
+        		while (!isInterrupted() && 
+                		( xmppManager.getConnection() == null
+                		|| !xmppManager.getConnection().isAuthenticated())) {
+                    Log.i(LOGTAG, "Trying to reconnect in " + waiting()
+                            + " seconds");
+                   
+                    // 取消闹钟广播什么的,重新提交连接申请的时候,把
+//                    xmppManager.unregisterHeartBeatReceiver();
+                    Thread.sleep((long) waiting() * 1000L);
+                    // 10秒没有重连上,就狗带吧.
+                    xmppManager.cleanTask();
+                    
+                    if (!isInterrupted() && 
+                    		( xmppManager.getConnection() == null
+                    		|| !xmppManager.getConnection().isAuthenticated()))
+                    	
+                    			xmppManager.connect();
+                    
+                    Log.i(LOGTAG, "reconnectThread start...");
+                    waiting++;
+                }
+    		}
         } catch (final InterruptedException e) {
             xmppManager.getHandler().post(new Runnable() {
                 public void run() {

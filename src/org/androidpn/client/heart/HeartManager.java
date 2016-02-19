@@ -65,6 +65,9 @@ public class HeartManager implements PingFailedListener, PingSucessListener{
 	
 	private HeartManager (XmppManager xmppManager) {
 		this.xmppManager = xmppManager;
+		// 下面这行代码是装饰品.因为发现我引用的asmack中的库,那个静态代码块没有执行,导致我再后面初始化连接.连接中调用静态代码块中初始化的
+		// 方法没有调用,导致我每次去从pingManager中获取对象的时候报null,这里先执行以下那个类的任一方法,然后这个类肯定就加载执行了class
+		// 的静态代码块,然后再去初始化获取,就好了.这个bug玩了两天.
 		pingManager = PingManager.getInstanceFor(xmppManager.getConnection());
 		// 当前的网络的实际类型通过方法获取到
 		currentConnType = NetUtils.networkConnectionType(xmppManager.getContext());
@@ -89,13 +92,13 @@ public class HeartManager implements PingFailedListener, PingSucessListener{
 
 	public static HeartManager getInstance (XmppManager xmppManager) {
 		
-		if (heartManger == null || !xmppManager.equals(xmppManager)) {
+		/*if (heartManger == null || !xmppManager.equals(xmppManager)) {
 			synchronized (HeartManager.class) {
 				if (heartManger == null || !xmppManager.equals(xmppManager))
 					heartManger = new HeartManager(xmppManager);
 			}
-		}
-		return heartManger;
+		}*/
+		return new HeartManager(xmppManager);
 	}
 
 	public int getConnType() {
@@ -201,9 +204,7 @@ public class HeartManager implements PingFailedListener, PingSucessListener{
 							startReconnectionThread();
 						}
 					}
-						
 				}
-				
 			}
 		};
 		calculateTimer.schedule(timerTask, currentHeart, currentHeart);
