@@ -128,7 +128,6 @@ public class XmppManager {
         taskList = new ArrayList<Runnable>();
         reconnection = new ReconnectionThread(this);
         
-        
     }
 
     public Context getContext() {
@@ -220,6 +219,7 @@ public class XmppManager {
             		( (getConnection() == null) 
             				|| !getConnection().isConnected()
             				|| !getConnection().isAuthenticated() ) ) {
+
             	Log.i(LOGTAG, "startReconnectionThread()... ");
                 reconnection  = new ReconnectionThread(this);
                 reconnection.setName("Xmpp Reconnection Thread...");
@@ -253,7 +253,9 @@ public class XmppManager {
             futureTask = null;
             if (!taskList.isEmpty()) {
                 Runnable runnable = (Runnable) taskList.get(0);
-                Log.i(LOGTAG, "runTask()..."+ runnable.getClass().getSimpleName() + taskList.size());
+                
+                Log.i(LOGTAG, "runTask()..."+ runnable.getClass().getSimpleName() + "当前的数量" +taskList.size() );
+
                 taskList.remove(0);
                 running = true;
                 futureTask = taskSubmitter.submit(runnable);
