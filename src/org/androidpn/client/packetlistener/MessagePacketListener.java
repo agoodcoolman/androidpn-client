@@ -28,15 +28,14 @@ public class MessagePacketListener implements PacketListener {
 	@Override
 	public void processPacket(Packet packet) {
 		Log.i("MessagePacketListener.PacketListener",
-                "processPacket().....");
+                "processPacket()....."); 
         Log.i("MessagePacketListener.PacketListener", "packet="
                 + packet.toXML());
         Message message = (Message)packet;
         String body = message.getBody();
 		if (packet != null && packet instanceof Message) {
 			// 处理消息接收
-			
-			
+			Log.i(LOGTAG, "收到的消息"+packet.toString());
 			// 然后给服务器发送消息回执
 			Message reply = new Message();
 			reply.setDefaultXmlns("jabber:message:receptconfirm");

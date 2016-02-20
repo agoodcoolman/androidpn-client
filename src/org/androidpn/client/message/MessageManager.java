@@ -17,9 +17,9 @@ public class MessageManager {
 	private static MessageManager instance;
 	
 	
-	public XmppChatMessage getChatMessage(String from, String to,  String body) {
-		
-		return new XmppChatMessage(from, to, Message.Type.chat, body);
+	public XmppVideoMessage getChatMessage(String to,  String body) {
+		String upload = "rtmp://192.168.1.103/live/trand";
+		return new XmppVideoMessage(to, XmppVideoMessage.Type.chat, body, upload);
 		
 	}
 	

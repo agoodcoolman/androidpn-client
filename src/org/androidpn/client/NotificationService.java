@@ -22,6 +22,7 @@ import java.util.concurrent.Future;
 
 import org.androidpn.client.uitls.LogUtil;
 import org.jivesoftware.smack.packet.Message;
+import org.jivesoftware.smack.packet.Packet;
 import org.jivesoftware.smackx.filetransfer.IBBTransferNegotiator;
 
 import android.app.Service;
@@ -339,7 +340,7 @@ public class NotificationService extends Service {
 		}
 
 		@Override
-		public boolean sendMessage(Message message) {
+		public boolean sendMessage(Packet message) {
 			xmppManager.getConnection().sendPacket(message);
 			return false;
 		}
@@ -354,7 +355,7 @@ public class NotificationService extends Service {
     }
     
    public interface onMessage {
-	   boolean sendMessage(Message message);
+	   boolean sendMessage(Packet message);
    }
 
 }

@@ -125,7 +125,7 @@ public class XmppManager {
         
         connectionListener = new PersistentConnectionListener(this);
         notificationPacketListener = new NotificationPacketListener(this);
-//        messagePacketListener = new MessagePacketListener(this);
+        messagePacketListener = new MessagePacketListener(this);
         
         handler = new Handler();
         taskList = new ArrayList<Runnable>();
@@ -166,7 +166,7 @@ public class XmppManager {
                     Log.i(LOGTAG, "terminatePersistentConnection()... run()");
                     xmppManager.getConnection().removePacketListener(
                             xmppManager.getNotificationPacketListener());
-//                    xmppManager.getConnection().removePacketListener(getMessagePacketListener());
+                    xmppManager.getConnection().removePacketListener(getMessagePacketListener());
                    
                     xmppManager.getConnection().disconnect();
                 }
@@ -209,9 +209,9 @@ public class XmppManager {
         return notificationPacketListener;
     }
 
-//    public MessagePacketListener getMessagePacketListener() {
-//		return messagePacketListener;
-//	}
+    public MessagePacketListener getMessagePacketListener() {
+		return messagePacketListener;
+	}
     
 	public void startReconnectionThread() {
 		
@@ -436,19 +436,7 @@ public class XmppManager {
             Log.i(LOGTAG, "RegisterTask.run()..."+"taskList"+taskList.size());
 
             if (!xmppManager.isRegistered()) {
-            	/*
-            	 *  SharedPreferences spConfig = LoginActivity.this.getSharedPreferences("config", Context.MODE_PRIVATE);
-			        Editor edit = spConfig.edit();
-			        edit.putString("user_no", "police001");
-			        edit.putString("Password", "000000");
-            	 */
-            	/* final String newUsername = getContext().getSharedPreferences("config", Context.MODE_PRIVATE)
-            	.getString("user_no", "");
-            	 final String newPassword = getContext().getSharedPreferences("config", Context.MODE_PRIVATE)
-            			 .getString("Password", "");*/
-
-//                final String newUsername = newRandomUUID();
-//                final String newPassword = newRandomUUID();
+            	
                 final String newUsername = XmppPush.newUsername;
                 final String newPassword = XmppPush.newPassword;
 
@@ -576,9 +564,9 @@ public class XmppManager {
                     connection.addPacketListener(packetListener, packetFilter);
 
                     // 注册用户之前的消息 接收
-//                    PacketTypeFilter messageTypeFilter = new PacketTypeFilter(Message.class);
-//                    MessagePacketListener messagePacketListener = xmppManager.getMessagePacketListener();
-//                    connection.addPacketListener(messagePacketListener, messageTypeFilter);
+                    PacketTypeFilter messageTypeFilter = new PacketTypeFilter(Message.class);
+                    MessagePacketListener messagePacketListener = xmppManager.getMessagePacketListener();
+                    connection.addPacketListener(messagePacketListener, messageTypeFilter);
 
                     // 开启心跳包
                     startHeartManager();
@@ -655,19 +643,16 @@ public class XmppManager {
     	}
 	}
    
-	
+	/**
+    * 聊天消息的监听
+    */
+	private MessagePacketListener messagePacketListener;
 	
   /*  *//**
      * 开启闹钟,定时发送
      *//*
     public static int ALARM_REQUESTCODE = 100;
 
-    *//**
-     * 聊天消息的监听
-     *//*
-	private MessagePacketListener messagePacketListener;
-	
-	
 
     *//**
      * 开启手机的定时闹钟功能
