@@ -89,13 +89,7 @@ public class HeartManager implements PingFailedListener, PingSucessListener{
 
 	public static HeartManager getInstance (XmppManager xmppManager) {
 		
-		if (heartManger == null) {
-			synchronized (HeartManager.class) {
-				if (heartManger == null)
-					heartManger = new HeartManager(xmppManager);
-			}
-		}
-		return heartManger;
+		return new HeartManager(xmppManager);
 	}
 
 	public int getConnType() {
