@@ -89,7 +89,7 @@ public class NotificationService extends Service {
         telephonyManager = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
         // wifiManager = (WifiManager) getSystemService(Context.WIFI_SERVICE);
         // connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-
+        // 测试分支
         sharedPrefs = getSharedPreferences(Constants.SHARED_PREFERENCE_NAME,
                 Context.MODE_PRIVATE);
 
