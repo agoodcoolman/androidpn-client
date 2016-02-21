@@ -27,7 +27,9 @@ import org.androidpn.client.threadpool.ExecutorThreadPool;
 import org.androidpn.client.uitls.DateUtils;
 import org.androidpn.client.uitls.LogUtil;
 import org.androidpn.client.uitls.NetUtils;
+import org.jivesoftware.smack.Connection;
 import org.jivesoftware.smack.ConnectionConfiguration;
+import org.jivesoftware.smack.ConnectionCreationListener;
 import org.jivesoftware.smack.ConnectionListener;
 import org.jivesoftware.smack.PacketListener;
 import org.jivesoftware.smack.XMPPConnection;
@@ -61,10 +63,10 @@ import android.util.Log;
  * @author Sehwan Noh (devnoh@gmail.com)
  */
 public class XmppManager {
-
+	
     private static final String LOGTAG = LogUtil.makeLogTag(XmppManager.class);
 
-    private static final String XMPP_RESOURCE_NAME = "AndroidpnClient";
+    public static final String XMPP_RESOURCE_NAME = "AndroidpnClient";
 
     private Context context;
 
@@ -109,6 +111,7 @@ public class XmppManager {
     private AlarmManager alarmManager;
 
     public XmppManager(NotificationService notificationService) {
+    	PingManager.getInstanceFor(getConnection());
         context = notificationService;
         taskSubmitter = notificationService.getTaskSubmitter();
         taskTracker = notificationService.getTaskTracker();
@@ -122,7 +125,7 @@ public class XmppManager {
         
         connectionListener = new PersistentConnectionListener(this);
         notificationPacketListener = new NotificationPacketListener(this);
-//        messagePacketListener = new MessagePacketListener(this);
+        messagePacketListener = new MessagePacketListener(this);
         
         handler = new Handler();
         taskList = new ArrayList<Runnable>();
@@ -136,8 +139,11 @@ public class XmppManager {
     // 这个方法在NotificationService的onCreate调用一次
     // 然后在广播中也调用了一次,网络连接畅通也要接收一个广播,启动一个Connect连接
     public void connect() {
-        Log.i(LOGTAG, "connect() 当前线程名字  ...."+Thread.currentThread().getName());
-        submitLoginTask();
+    	synchronized (taskList) {
+    		Log.i(LOGTAG, "connect() 当前线程名字  ...."+Thread.currentThread().getName());
+            submitLoginTask();
+		}
+        
     }
 
     public void disconnect() {
@@ -160,7 +166,7 @@ public class XmppManager {
                     Log.i(LOGTAG, "terminatePersistentConnection()... run()");
                     xmppManager.getConnection().removePacketListener(
                             xmppManager.getNotificationPacketListener());
-//                    xmppManager.getConnection().removePacketListener(getMessagePacketListener());
+                    xmppManager.getConnection().removePacketListener(getMessagePacketListener());
                    
                     xmppManager.getConnection().disconnect();
                 }
@@ -203,9 +209,9 @@ public class XmppManager {
         return notificationPacketListener;
     }
 
-//    public MessagePacketListener getMessagePacketListener() {
-//		return messagePacketListener;
-//	}
+    public MessagePacketListener getMessagePacketListener() {
+		return messagePacketListener;
+	}
     
 	public void startReconnectionThread() {
 		
@@ -214,11 +220,12 @@ public class XmppManager {
             // 那么是成功连接的, 这是进入重连线程,无法启动重新连接
         	// 这里是如果当前的连接是存活的,是不需要重新连接的
 //        	terminatePersistentConnection(); // 先关闭其他的连接
-        	Log.i(LOGTAG, "startReconnectionThread()... 重连线程前,connect的状态");
+        	Log.i(LOGTAG, "startReconnectionThread()... 启动xmppManager中的重连线程方法,这个方法只要启动一次就好了.");
             if ((reconnection == null || !reconnection.isAlive()) || 
             		( (getConnection() == null) 
             				|| !getConnection().isConnected()
             				|| !getConnection().isAuthenticated() ) ) {
+
             	Log.i(LOGTAG, "startReconnectionThread()... ");
 
                 reconnection  = new ReconnectionThread(this);
@@ -253,7 +260,6 @@ public class XmppManager {
             futureTask = null;
             if (!taskList.isEmpty()) {
                 Runnable runnable = (Runnable) taskList.get(0);
-
                 Log.i(LOGTAG, "runTask()..."+ runnable.getClass().getSimpleName() + "当前的数量" +taskList.size() );
 
                 taskList.remove(0);
@@ -306,8 +312,8 @@ public class XmppManager {
 
     private void addTask(Runnable runnable) {
         Log.i(LOGTAG, "addTask(runnable)..."+ runnable.getClass().getSimpleName());
-        taskTracker.increase();
         synchronized (taskList) {
+        	taskTracker.increase();
             if (taskList.isEmpty() && !running) {
                 //空或者是 非执行状态
                 running = true;
@@ -327,18 +333,31 @@ public class XmppManager {
      */
     private void dropTask(int dropNum) {
         synchronized (taskList) {
+        	Log.i(LOGTAG, "dropTask(runnable)... 移除前task中的总数=" + taskList.size() );
             if (taskList.size() >= dropNum) {
                 for (int i = 0; i < dropNum; i++) {
                     Log.i(LOGTAG, "dropTask(runnable)... done");
                     taskList.remove(0);
                     taskTracker.decrease();
                 }
+                
             }
         }
     }
 
     public void cleanTask() {
     	dropTask(taskList.size());
+    	/*synchronized (taskList) {
+    		if (taskTracker.count > 0) {
+            	Log.i(LOGTAG, "dropTask(runnable)... taskTracker.count=" + taskTracker.count);
+            	// 在执行的过程中,如果出现了问题,重连了,其实taskTracker还没有来得及-1,然后直接在dropTask中执行的时候,就会出现task只有2,但是tracker还是3的情况
+            	for (int i = 0; i < taskTracker.count; i++) {
+            		Log.i(LOGTAG, "dropTask(runnable)... taskTracker.decrease()执行一次");
+    				taskTracker.decrease();
+    			}
+            }
+		}*/
+    	
     }
     
     private void removeAccount() {
@@ -360,7 +379,7 @@ public class XmppManager {
         }
 
         public void run() {
-            Log.i(LOGTAG, "ConnectTask.run()..."+"taskList's number"+taskList.size());
+            Log.i(LOGTAG, "ConnectTask.run()..."+"taskList's number	的当前数量"+taskList.size());
 
             if (!xmppManager.isConnected()) {
                 // Create the configuration for this new connection
@@ -377,7 +396,7 @@ public class XmppManager {
                 try {
                     // Connect to the server
                     connection.connect();
-                    Log.i(LOGTAG, "XMPP connected successfully"+"taskList"+taskList.size());
+                    Log.i(LOGTAG, "XMPP connected successfully"+"taskList ="+ taskList.size());
 
                     // packet provider
                     ProviderManager.getInstance().addIQProvider("notification",
@@ -417,19 +436,7 @@ public class XmppManager {
             Log.i(LOGTAG, "RegisterTask.run()..."+"taskList"+taskList.size());
 
             if (!xmppManager.isRegistered()) {
-            	/*
-            	 *  SharedPreferences spConfig = LoginActivity.this.getSharedPreferences("config", Context.MODE_PRIVATE);
-			        Editor edit = spConfig.edit();
-			        edit.putString("user_no", "police001");
-			        edit.putString("Password", "000000");
-            	 */
-            	/* final String newUsername = getContext().getSharedPreferences("config", Context.MODE_PRIVATE)
-            	.getString("user_no", "");
-            	 final String newPassword = getContext().getSharedPreferences("config", Context.MODE_PRIVATE)
-            			 .getString("Password", "");*/
-
-//                final String newUsername = newRandomUUID();
-//                final String newPassword = newRandomUUID();
+            	
                 final String newUsername = XmppPush.newUsername;
                 final String newPassword = XmppPush.newPassword;
 
@@ -557,9 +564,9 @@ public class XmppManager {
                     connection.addPacketListener(packetListener, packetFilter);
 
                     // 注册用户之前的消息 接收
-//                    PacketTypeFilter messageTypeFilter = new PacketTypeFilter(Message.class);
-//                    MessagePacketListener messagePacketListener = xmppManager.getMessagePacketListener();
-//                    connection.addPacketListener(messagePacketListener, messageTypeFilter);
+                    PacketTypeFilter messageTypeFilter = new PacketTypeFilter(Message.class);
+                    MessagePacketListener messagePacketListener = xmppManager.getMessagePacketListener();
+                    connection.addPacketListener(messagePacketListener, messageTypeFilter);
 
                     // 开启心跳包
                     startHeartManager();
@@ -606,47 +613,49 @@ public class XmppManager {
      */
     public void startHeartManager() {
     	Log.i(LOGTAG, "xmppManager startHeartManager() ...");
-    	HeartManager instance = HeartManager.getInstance(XmppManager.this);
+    	heartManager = HeartManager.getInstance(XmppManager.this);
     	// 连接成功,三次心跳
-    	boolean send3Ping = instance.send3Ping();
+    	boolean send3Ping = heartManager.send3Ping();
     	// 是否要进行测算,这里是即使重新开了线程,这里照样是.
     	if (send3Ping && NetUtils.TYPE_MOIBLE == networkType && DateUtils.getDay_OF_WEEK() == 4) {
     		// 测算要求是星期三,并且是手机网络. 这里是每个星期四进行测算
-    		instance.calculateBestHeart();
+    		heartManager.calculateBestHeart();
     	}
-    	instance.frontTaskActivity();
+    	heartManager.frontTaskActivity();
     }
+    
     // 切换到前台
     public void frontTask() {
     	Log.i(LOGTAG, "xmppManager frontTask() ...");
     	if (getConnection() != null && getConnection().isAuthenticated()) {
-    		HeartManager instance = HeartManager.getInstance(XmppManager.this);
-    		instance.frontTaskActivity();
+    		// TODO 这里要进行心跳
+    		
+    		heartManager.frontTaskActivity();
     	}
 	}
 
 	// 切换到后台
 	public void backgroundTask() {
 		Log.i(LOGTAG, "xmppManager backgroundTask ...");
+		// TODO 进行心跳
 		if (getConnection() != null && getConnection().isAuthenticated()) {
-			HeartManager instance = HeartManager.getInstance(XmppManager.this);
-			instance.backgroundTaskActivity();
+			
+			heartManager.backgroundTaskActivity();
     	}
 	}
    
-	
+	/**
+    * 聊天消息的监听
+    */
+	private MessagePacketListener messagePacketListener;
+
+	private HeartManager heartManager;
 	
   /*  *//**
      * 开启闹钟,定时发送
      *//*
     public static int ALARM_REQUESTCODE = 100;
 
-    *//**
-     * 聊天消息的监听
-     *//*
-	private MessagePacketListener messagePacketListener;
-	
-	
 
     *//**
      * 开启手机的定时闹钟功能
