@@ -21,6 +21,7 @@
 		</activity>
 		<service android:enabled="true"
 			android:name="org.androidpn.client.NotificationService"
+			
 			android:label="NotificationService">
 			<intent-filter>
 				<action android:name="org.androidpn.client.NotificationService" />

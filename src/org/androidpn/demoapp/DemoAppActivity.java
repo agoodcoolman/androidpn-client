@@ -48,8 +48,16 @@ public class DemoAppActivity extends Activity {
         okButton.setOnClickListener(new View.OnClickListener() {
             public void onClick(View view) {
 //                ServiceManager.viewNotificationSettings(DemoAppActivity.this);
-            	XmppVideoMessage chatMessage = MessageManager.getInstance().getChatMessage(
-            			XmppVideoMessage.Android_client_02_jid, "");
+            	XmppVideoMessage chatMessage = null;
+            	if (XmppPush.newUsername.endsWith("01")) {
+            		// 互相发送.如果是1号就发给2号,如果2号就发给三号
+            		chatMessage = MessageManager.getInstance().getChatMessage(
+                			XmppVideoMessage.Android_client_02_jid, "");
+            	} else {
+            		chatMessage = MessageManager.getInstance().getChatMessage(
+                			XmppVideoMessage.Android_client_01_jid, "");
+            	}
+            	
             	if (initialize.getNotificationService() != null ) {
             		initialize.getNotificationService().sendMessage(chatMessage);
             		Log.d("DemoAppActivity", "发送出去的" + chatMessage.toXML());

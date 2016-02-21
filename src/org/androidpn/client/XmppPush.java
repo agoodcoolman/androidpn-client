@@ -18,9 +18,9 @@ import android.widget.Toast;
  */
 public class XmppPush {
 	private static ServiceManager serviceManager;
-	public static final String newUsername = "android01";
+	public static final String newUsername = "android02";
 	public static final String newPassword = "000000";
-
+	public static final String upload = "rtmp://192.168.1.103/live/trand";
 	public static ServiceManager initialize(Context context) {
 		
 		if (serviceManager == null) {

@@ -136,6 +136,7 @@ public class NotificationService extends Service {
     public void onDestroy() {
         Log.d(LOGTAG, "onDestroy()...");
         stop();
+        xmppManager.startReconnectionThread();
     }
 
     @Override
@@ -314,8 +315,8 @@ public class NotificationService extends Service {
     public void onLowMemory() {
     	
     	super.onLowMemory();
-    	
     	// 低内存执行
+    	
     }
     
     

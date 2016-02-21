@@ -1,5 +1,6 @@
 package org.androidpn.client.message;
 
+import org.androidpn.client.XmppPush;
 import org.jivesoftware.smack.packet.Message;
 
 import android.telephony.gsm.SmsMessage.MessageClass;
@@ -18,8 +19,8 @@ public class MessageManager {
 	
 	
 	public XmppVideoMessage getChatMessage(String to,  String body) {
-		String upload = "rtmp://192.168.1.103/live/trand";
-		return new XmppVideoMessage(to, XmppVideoMessage.Type.chat, body, upload);
+		
+		return new XmppVideoMessage(to, XmppVideoMessage.Type.chat, body, XmppPush.upload);
 		
 	}
 	

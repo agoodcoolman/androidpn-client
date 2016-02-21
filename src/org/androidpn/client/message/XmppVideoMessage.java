@@ -7,6 +7,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import org.androidpn.client.XmppManager;
 import org.jivesoftware.smack.packet.Message;
 import org.jivesoftware.smack.packet.Packet;
 import org.jivesoftware.smack.packet.XMPPError;
@@ -29,9 +30,9 @@ import org.jivesoftware.smack.util.StringUtils;
 public class XmppVideoMessage extends Packet {
 
 	public static final String NAME_SPACE = "jabber:message:video";
-	public static final String Android_client_01_jid = "android01@127.0.0.1/android";
+	public static final String Android_client_01_jid = "android01@127.0.0.1/" + XmppManager.XMPP_RESOURCE_NAME;
 
-	public static final String Android_client_02_jid = "android02@127.0.0.1/android";
+	public static final String Android_client_02_jid = "android02@127.0.0.1/" + XmppManager.XMPP_RESOURCE_NAME;
 
 	public static final String platform_client_03_jid = "platform03@127.0.0.1/platform";
 

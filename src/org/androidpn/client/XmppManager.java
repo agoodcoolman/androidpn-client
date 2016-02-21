@@ -66,7 +66,7 @@ public class XmppManager {
 	
     private static final String LOGTAG = LogUtil.makeLogTag(XmppManager.class);
 
-    private static final String XMPP_RESOURCE_NAME = "AndroidpnClient";
+    public static final String XMPP_RESOURCE_NAME = "AndroidpnClient";
 
     private Context context;
 
@@ -613,23 +613,24 @@ public class XmppManager {
      */
     public void startHeartManager() {
     	Log.i(LOGTAG, "xmppManager startHeartManager() ...");
-    	HeartManager instance = HeartManager.getInstance(XmppManager.this);
+    	heartManager = HeartManager.getInstance(XmppManager.this);
     	// 连接成功,三次心跳
-    	boolean send3Ping = instance.send3Ping();
+    	boolean send3Ping = heartManager.send3Ping();
     	// 是否要进行测算,这里是即使重新开了线程,这里照样是.
     	if (send3Ping && NetUtils.TYPE_MOIBLE == networkType && DateUtils.getDay_OF_WEEK() == 4) {
     		// 测算要求是星期三,并且是手机网络. 这里是每个星期四进行测算
-    		instance.calculateBestHeart();
+    		heartManager.calculateBestHeart();
     	}
-    	instance.frontTaskActivity();
+    	heartManager.frontTaskActivity();
     }
+    
     // 切换到前台
     public void frontTask() {
     	Log.i(LOGTAG, "xmppManager frontTask() ...");
     	if (getConnection() != null && getConnection().isAuthenticated()) {
     		// TODO 这里要进行心跳
-    		HeartManager instance = HeartManager.getInstance(XmppManager.this);
-    		instance.frontTaskActivity();
+    		
+    		heartManager.frontTaskActivity();
     	}
 	}
 
@@ -638,8 +639,8 @@ public class XmppManager {
 		Log.i(LOGTAG, "xmppManager backgroundTask ...");
 		// TODO 进行心跳
 		if (getConnection() != null && getConnection().isAuthenticated()) {
-			HeartManager instance = HeartManager.getInstance(XmppManager.this);
-			instance.backgroundTaskActivity();
+			
+			heartManager.backgroundTaskActivity();
     	}
 	}
    
@@ -647,6 +648,8 @@ public class XmppManager {
     * 聊天消息的监听
     */
 	private MessagePacketListener messagePacketListener;
+
+	private HeartManager heartManager;
 	
   /*  *//**
      * 开启闹钟,定时发送
