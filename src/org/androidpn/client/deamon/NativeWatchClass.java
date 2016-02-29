@@ -8,13 +8,13 @@ import android.app.ActivityManager;
 import android.app.ActivityManager.RunningServiceInfo;
 import android.content.Context;
 import android.util.Log;
-
+     
 /**
  * 
  * @ClassName: NativeClass
  * @Description: 启用C代码,主要实现保持服务不被杀.
  * @author jin
- * @Company 深圳德奥技术有限公司
+ * @Company 
  * @date 2016年2月21日 下午2:43:08
  *
  */
