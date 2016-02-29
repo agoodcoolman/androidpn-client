@@ -39,6 +39,13 @@ public class PersistentConnectionListener implements ConnectionListener {
     @Override
     public void connectionClosed() {
         Log.d(LOGTAG, "connectionClosed()...");
+        if (xmppManager.getConnection() != null
+                && xmppManager.getConnection().isConnected()) {
+        	 Log.d(LOGTAG, "connectionClosed() 里面的 disconnect()...");
+            xmppManager.getConnection().disconnect();
+        }
+        
+        xmppManager.startReconnectionThread();
     }
 
     @Override

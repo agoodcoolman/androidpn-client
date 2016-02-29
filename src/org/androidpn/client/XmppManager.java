@@ -21,6 +21,7 @@ import java.util.UUID;
 import java.util.concurrent.Future;
 
 import org.androidpn.client.heart.HeartManager;
+import org.androidpn.client.packetlistener.ConnectLoginSucessListener;
 import org.androidpn.client.packetlistener.MessagePacketListener;
 import org.androidpn.client.packetlistener.NotificationPacketListener;
 import org.androidpn.client.threadpool.ExecutorThreadPool;
@@ -109,7 +110,7 @@ public class XmppManager {
     private PendingIntent operation;
     // 闹钟管理对象
     private AlarmManager alarmManager;
-
+    
     public XmppManager(NotificationService notificationService) {
     	PingManager.getInstanceFor(getConnection());
         context = notificationService;
@@ -180,8 +181,8 @@ public class XmppManager {
     public XMPPConnection getConnection() {
         return connection;
     }
-
-    public void setConnection(XMPPConnection connection) {
+    
+	public void setConnection(XMPPConnection connection) {
         this.connection = connection;
     }
 
@@ -570,6 +571,12 @@ public class XmppManager {
 
                     // 开启心跳包
                     startHeartManager();
+                    // 执行成功后的监听接口
+                    ConnectLoginSucessListener connectLoginSucessListener = ((NotificationService)context).getConnectLoginSucessListener();
+                    if (connectLoginSucessListener != null) {
+                    	connectLoginSucessListener.onLoginSucess();
+                    }
+                    
                     Log.i(LOGTAG, "start heart beat in successfully...");
                     if (!xmppManager.isConnected()) {
                         dropTask(taskList.size());

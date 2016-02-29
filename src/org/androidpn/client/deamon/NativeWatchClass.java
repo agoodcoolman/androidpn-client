@@ -25,7 +25,7 @@ public class NativeWatchClass {
 		System.loadLibrary("monitor");
 	}
 
-	private static final String PACKAGE = "com.example.dameonservice/";
+	private static String PACKAGE = "";
 	private String mMonitoredService = "";
 	private volatile boolean bHeartBreak = false;
 	private Context mContext;
@@ -37,8 +37,10 @@ public class NativeWatchClass {
 		}
 	}
 
-	public NativeWatchClass(Context context	) {
+	public NativeWatchClass(Context context) {
 		mContext = context;	
+		PACKAGE = context.getPackageName() +"/";
+		
 	}
 
 	private int isServiceRunning() {
@@ -78,5 +80,8 @@ public class NativeWatchClass {
 	 * @return 实际发送的字节
 	 */
 	private native int sendMsgToMonitor(String msg);
+	
+	
+	
 
 }

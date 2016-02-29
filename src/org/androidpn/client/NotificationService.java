@@ -15,11 +15,13 @@
  */
 package org.androidpn.client;
 
+import java.lang.ref.WeakReference;
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import org.androidpn.client.packetlistener.ConnectLoginSucessListener;
 import org.androidpn.client.uitls.LogUtil;
 import org.jivesoftware.smack.packet.Message;
 import org.jivesoftware.smack.packet.Packet;
@@ -71,6 +73,9 @@ public class NotificationService extends Service {
     private SharedPreferences sharedPrefs;
 
     private String deviceId;
+    
+    private static ConnectLoginSucessListener connectLoginSucessListeners;
+    
     private NotificationServiceIBinder myBinder ;
 
     public NotificationService() {
@@ -339,7 +344,7 @@ public class NotificationService extends Service {
 			Log.d(LOGTAG, "service getService ...");
 			return NotificationService.this;
 		}
-
+		
 		@Override
 		public boolean sendMessage(Packet message) {
 			xmppManager.getConnection().sendPacket(message);
@@ -347,6 +352,15 @@ public class NotificationService extends Service {
 		}
 		
     }
+    
+    public static ConnectLoginSucessListener getConnectLoginSucessListener() {
+		return connectLoginSucessListeners;
+	}
+
+	public static void setConnectLoginSucessListener(
+			ConnectLoginSucessListener connectLoginSucessListener) {
+		connectLoginSucessListeners = connectLoginSucessListener;
+	}
     
     // 接口前台服务,后台服务
     public interface ServiceInterface {

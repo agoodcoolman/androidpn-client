@@ -282,10 +282,9 @@ public class HeartManager implements PingFailedListener, PingSucessListener{
     // 应用程序在后台时候
     public void backgroundTaskActivity() {
     	Log.i(LOGTAG, "HeartManager backgroundTaskActivity...");
-    	boolean send3Ping = send3Ping();
-    	if (send3Ping) {
-    		fixPing(250000);
-    	}
+
+    	fixPing(200000);
+
     }
 	
     public void stopHeart() {

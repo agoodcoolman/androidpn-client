@@ -112,27 +112,20 @@ public final class ServiceManager {
         Log.i(LOGTAG, "sharedPrefs=" + sharedPrefs.toString());
     }
 
-    public void startService() {
-        Thread serviceThread = new Thread(new Runnable() {
-            
-			@SuppressLint("NewApi")
-			@Override
-            public void run() {
-            	synchronized (context) {
-            		if (NetUtils.isNetWorkConnection(context)) {
-            			NetUtils.networkConnectionType(context);
-                		// 有网络连接才进行连接
-                		Intent intent = NotificationService.getIntent();
-                        intent.setPackage(context.getPackageName());
-                        intent.setAction("org.androidpn.client.NotificationService");
-//                        context.startService(intent);
-                        context.bindService(intent, sconnection, Context.BIND_AUTO_CREATE);
-                	}
-                }
-			}
-            	
-        });
-        serviceThread.start();
+    @SuppressLint("NewApi")
+	public void startService() {
+    	synchronized (context) {
+    		if (NetUtils.isNetWorkConnection(context)) {
+    			NetUtils.networkConnectionType(context);
+        		// 有网络连接才进行连接
+        		Intent intent = NotificationService.getIntent();
+                intent.setPackage(context.getPackageName());
+                intent.setAction("org.androidpn.client.NotificationService");
+//                context.startService(intent);
+                context.bindService(intent, sconnection, Context.BIND_AUTO_CREATE);
+        	}
+        }
+        
     }
 
     
