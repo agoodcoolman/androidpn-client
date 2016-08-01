@@ -6,7 +6,7 @@ import org.jivesoftware.smack.packet.IQ;
   * @ClassName: NotificationConfirmIQ
   * @Description: send respone message to confirm the message has receive
   * @author jin
-  * @Company 深圳德奥技术有限公司
+  * @Company 
   * @date 2015年10月20日 上午9:33:40
   *
  */

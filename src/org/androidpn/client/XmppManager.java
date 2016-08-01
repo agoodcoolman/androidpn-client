@@ -261,7 +261,7 @@ public class XmppManager {
             if (!taskList.isEmpty()) {
                 Runnable runnable = (Runnable) taskList.get(0);
                 
-                Log.i(LOGTAG, "runTask()..."+ runnable.getClass().getSimpleName() + "当前的数量" +taskList.size() );
+                Log.i(LOGTAG, "runTask()..."+ runnable.getClass().getSimpleName() + "当前的数量" + taskList.size() );
 
                 taskList.remove(0);
                 running = true;
@@ -316,7 +316,7 @@ public class XmppManager {
         synchronized (taskList) {
         	taskTracker.increase();
             if (taskList.isEmpty() && !running) {
-                //空或者是 非执行状态
+                // 空或者是 非执行状态
                 running = true;
                 futureTask = taskSubmitter.submit(runnable);
                 if (futureTask == null) {

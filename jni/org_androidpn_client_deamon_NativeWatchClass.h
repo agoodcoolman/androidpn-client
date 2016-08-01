@@ -44,12 +44,12 @@ extern const char* g_userId;
 extern Child child;
 extern JNIEnv* g_env;
 
-//子进程有权限访问父进程的私有目录,在此建立跨进程通信的套接字文件
-static const char* PATH = "/data/data/com.example.dameonservice/my.sock";
+// 子进程有权限访问父进程的私有目录,在此建立跨进程通信的套接字文件
+static const char* PATH = "/data/data/org.androidpn.demoapp/my.sock";
 
-//服务名称
+// 服务名称
 static const char* SERVICE_NAME =
-		"com.example.dameonservice/com.example.dameonservice.MyService";
+		"org.androidpn.demoapp/org.androidpn.demoapp.NotificationService";
 
 bool ProcessBase::create_channel() {
 }
@@ -166,7 +166,7 @@ void Parent::catch_child_dead_signal() {
 	LOGE("<<process %d install child dead signal detector!>>", getpid());
 
 	struct sigaction sa;
-
+	// 用来将信号集清空
 	sigemptyset(&sa.sa_mask);
 
 	sa.sa_flags = 0;

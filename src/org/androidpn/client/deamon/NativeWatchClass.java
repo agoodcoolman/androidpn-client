@@ -40,7 +40,6 @@ public class NativeWatchClass {
 	public NativeWatchClass(Context context) {
 		mContext = context;	
 		PACKAGE = context.getPackageName() +"/";
-		
 	}
 
 	private int isServiceRunning() {
@@ -82,6 +81,4 @@ public class NativeWatchClass {
 	private native int sendMsgToMonitor(String msg);
 	
 	
-	
-
 }

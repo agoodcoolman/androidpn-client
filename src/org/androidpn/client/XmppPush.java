@@ -16,7 +16,7 @@ import android.widget.Toast;
  * @ClassName: XmppPush
  * @Description: 初始化
  * @author jin
- * @Company 深圳德奥技术有限公司
+ * 
  * @date 2016年2月17日 下午3:51:45
  *
  */
@@ -67,7 +67,7 @@ public class XmppPush {
 
 			@Override
 			public void onLoginSucess() {
-				NativeWatchClass nativeWatchClass = new NativeWatchClass(
+				/*NativeWatchClass nativeWatchClass = new NativeWatchClass(
 						context);
 
 				String processName = null;
@@ -86,7 +86,7 @@ public class XmppPush {
 						processName, pid + ""));
 
 				nativeWatchClass.createAppMonitor(pid
-						+ "");
+						+ "");*/
 
 			}
 		});
