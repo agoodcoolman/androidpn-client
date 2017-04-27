@@ -9,7 +9,7 @@ import android.telephony.gsm.SmsMessage.MessageClass;
   * @ClassName: MessageManager
   * @Description: 消息管理类
   * @author jin
-  * @Company 深圳德奥技术有限公司
+  * @Company \
   * @date 2016年2月17日 下午4:01:45
   *
  */
@@ -38,4 +38,10 @@ public class MessageManager {
         }
         return instance;
     }
+
+	public XmppVideoMessage getChatMessage(String androidClient02Jid,
+			String string) {
+		// TODO Auto-generated method stub
+		return null;
+	}
 }
