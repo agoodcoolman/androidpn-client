@@ -46,8 +46,10 @@ public class PersistentConnectionListener implements ConnectionListener {
         Log.d(LOGTAG, "connectionClosedOnError()...");
         if (xmppManager.getConnection() != null
                 && xmppManager.getConnection().isConnected()) {
+        	 Log.d(LOGTAG, "connectionClosedOnError() 里面的 disconnect()...");
             xmppManager.getConnection().disconnect();
         }
+        
         xmppManager.startReconnectionThread();
     }
 

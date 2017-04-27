@@ -15,6 +15,7 @@ import org.jivesoftware.smack.packet.Message;
  */
 public class XmppChatMessage extends Message {
 
+	public static final String NAME_SPACE = "jabber:message:message";
 	public static final String Android_client_01_jid = "android01@127.0.0.1/android";
 
 	public static final String Android_client_02_jid = "android02@127.0.0.1/android";
@@ -37,6 +38,7 @@ public class XmppChatMessage extends Message {
 		setFrom(from);
 		setBody(body);
 		setLanguage("en");
+		setDefaultXmlns(NAME_SPACE);
 	}
 
 }
